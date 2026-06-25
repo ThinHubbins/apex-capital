@@ -571,7 +571,7 @@ export default function PortfolioPage() {
                       <YAxis hide domain={["auto", "auto"]} />
                       <Tooltip
                         contentStyle={{ background: "#fff", border: "1px solid #E5E5E2", borderRadius: 10, fontSize: 12, color: "#111827" }}
-                        formatter={(v: number) => [`$${fmt(v)}`, "Value"]}
+                        formatter={(v) => [`$${fmt(v as number)}`, "Value"]}
                       />
                       <Area type="monotone" dataKey="value" stroke="#111827" strokeWidth={1.75}
                         fill="url(#portfolioGrad)" dot={false} activeDot={{ r: 4, fill: "#111827" }} />
