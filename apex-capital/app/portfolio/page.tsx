@@ -1,8 +1,9 @@
-"use client"
+"use client";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { AssetLogo } from "../../components/Assetslogo"; // adjust path if needed
 import {
   TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight,
   BarChart2, ArrowRight, ShoppingCart, DollarSign, Minus,
@@ -34,6 +35,7 @@ type Holding = {
   symbol: string;
   name: string;
   type: "stock" | "etf";
+  logo: string;
   quantity: number;
   avgCost: number;
   currentPrice: number;
@@ -69,6 +71,26 @@ const ALLOCATION_COLORS = ["#111827", "#4B5563", "#9CA3AF"];
 const FILTERS = ["1W", "1M", "3M", "1Y", "ALL"] as const;
 type Filter = (typeof FILTERS)[number];
 
+// ─── Logo helper ──────────────────────────────────────────────────────────────
+
+const TICKER_DOMAIN: Record<string, string> = {
+  AAPL: "apple.com", MSFT: "microsoft.com", GOOGL: "google.com",
+  AMZN: "amazon.com", TSLA: "tesla.com", NVDA: "nvidia.com",
+  META: "meta.com", NFLX: "netflix.com", DIS: "disney.com",
+  V: "visa.com", JPM: "jpmorganchase.com", KO: "coca-cola.com",
+  SPY: "ssga.com", QQQ: "invesco.com", VTI: "vanguard.com",
+  VXUS: "vanguard.com", VEA: "vanguard.com", EEM: "ishares.com",
+  GLD: "ssga.com",
+};
+
+function getAssetLogo(symbol: string, type: "stock" | "etf" | "crypto"): string {
+  if (type === "crypto") {
+    return `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/64/color/${symbol.toLowerCase()}.png`;
+  }
+  const domain = TICKER_DOMAIN[symbol.toUpperCase()] ?? `${symbol.toLowerCase()}.com`;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
@@ -86,17 +108,9 @@ function filterCutoff(f: Filter): Date {
   if (f === "1M") return new Date(now.getTime() - 30 * 86400_000);
   if (f === "3M") return new Date(now.getTime() - 90 * 86400_000);
   if (f === "1Y") return new Date(now.getTime() - 365 * 86400_000);
-  return new Date(0); // ALL
+  return new Date(0);
 }
 
-/**
- * Build cumulative portfolio value chart from filled buy/sell orders.
- * Strategy: sort orders by date, keep a running "cost basis cash spent"
- * so the chart shows invested capital growing/shrinking over time.
- * Each point = sum of (qty × price_at_execution) for each still-held lot
- * at that moment in time, using each order's own execution price as a
- * proxy for "value at that date" (since we have no external price history).
- */
 function buildChartData(orders: RawOrder[], filter: Filter, cashBalance: number): ChartPoint[] {
   const filled = orders
     .filter((o) => o.status === "filled" && o.filled_at)
@@ -106,8 +120,6 @@ function buildChartData(orders: RawOrder[], filter: Filter, cashBalance: number)
 
   const cutoff = filterCutoff(filter);
 
-  // Build a timeline: for every unique date with an order, compute cumulative
-  // invested equity (sum of buy total_values minus sell total_values so far).
   type Snapshot = { date: string; equity: number };
   const snapshots: Snapshot[] = [];
   let runningEquity = 0;
@@ -119,19 +131,16 @@ function buildChartData(orders: RawOrder[], filter: Filter, cashBalance: number)
     snapshots.push({ date: label, equity: Math.max(0, runningEquity) });
   }
 
-  // Always append a "now" point that adds current cash balance
   const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const lastEquity = snapshots[snapshots.length - 1]?.equity ?? 0;
   snapshots.push({ date: today, value: lastEquity + cashBalance } as unknown as Snapshot);
 
-  // Filter to the chosen time window (keep all if window precedes first order)
   const visible = snapshots.filter((_, i) => {
     const o = filled[i];
-    if (!o) return true; // the "now" point always shows
+    if (!o) return true;
     return new Date(o.filled_at!).getTime() >= cutoff.getTime();
   });
 
-  // Deduplicate same-date entries by taking the last value for that date
   const deduped = new Map<string, number>();
   for (const s of visible) {
     deduped.set(s.date, (s as unknown as ChartPoint).value ?? (s as Snapshot).equity);
@@ -214,9 +223,7 @@ function PerformersCard({
           <div key={h.symbol} className="flex items-center justify-between gap-3 px-5 py-3.5">
             <div className="flex items-center gap-3">
               <span className="w-4 text-[11px] font-semibold text-[#9CA3AF]">{i + 1}</span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F3F4F6] text-[10px] font-bold text-[#374151]">
-                {h.symbol.slice(0, 2)}
-              </div>
+              <AssetLogo symbol={h.symbol} logo={h.logo} size={28} />
               <div>
                 <p className="text-[13px] font-medium text-[#111827]">{h.symbol}</p>
                 <p className="text-[11px] text-[#9CA3AF]">
@@ -233,8 +240,6 @@ function PerformersCard({
     </div>
   );
 }
-
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded-lg bg-[#F3F4F6] ${className}`} />;
@@ -255,14 +260,12 @@ export default function PortfolioPage() {
   const [filter, setFilter] = useState<Filter>("1M");
   const [hoveredHolding, setHoveredHolding] = useState<string | null>(null);
 
-  // ── Auth guard ──
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.replace("/login");
     });
   }, []);
 
-  // ── Fetch everything ──
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -291,7 +294,6 @@ export default function PortfolioPage() {
     if (ordersRes.data) setOrders(ordersRes.data as RawOrder[]);
     if (depositsRes.data) setDeposits(depositsRes.data as RawDeposit[]);
 
-    // Build symbol → current price lookup
     const priceMap: Record<string, number> = {};
     for (const asset of marketsRes.results ?? []) {
       if (asset.price != null) priceMap[asset.symbol] = asset.price;
@@ -304,7 +306,6 @@ export default function PortfolioPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Derive holdings from filled orders ──
   const holdings: Holding[] = useMemo(() => {
     const map: Record<string, {
       name: string; type: "stock" | "etf";
@@ -332,13 +333,13 @@ export default function PortfolioPage() {
         symbol,
         name: v.name,
         type: v.type,
+        logo: getAssetLogo(symbol, v.type),
         quantity: v.totalQty,
         avgCost: v.totalQty > 0 ? v.totalCost / v.totalQty : 0,
-        currentPrice: liveMarket[symbol] ?? v.totalCost / v.totalQty, // fallback to avg cost if no live price
+        currentPrice: liveMarket[symbol] ?? v.totalCost / v.totalQty,
       }));
   }, [orders, liveMarket]);
 
-  // ── Ranked holdings ──
   const ranked: RankedHolding[] = useMemo(
     () =>
       [...holdings]
@@ -352,14 +353,12 @@ export default function PortfolioPage() {
     [holdings]
   );
 
-  // ── Portfolio totals ──
   const totalMarketValue = useMemo(() => ranked.reduce((s, h) => s + h.marketValue, 0), [ranked]);
   const totalInvested    = useMemo(() => ranked.reduce((s, h) => s + h.avgCost * h.quantity, 0), [ranked]);
   const totalGain        = totalMarketValue - totalInvested;
   const totalReturn      = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
   const totalPortfolio   = totalMarketValue + cashBalance;
 
-  // ── Allocation ──
   const stockValue = useMemo(
     () => ranked.filter((h) => h.type === "stock").reduce((s, h) => s + h.marketValue, 0),
     [ranked]
@@ -370,23 +369,21 @@ export default function PortfolioPage() {
   );
   const allocData = totalPortfolio > 0
     ? [
-        { name: "Stocks", value: stockValue, pct: (stockValue / totalPortfolio) * 100 },
-        { name: "ETFs",   value: etfValue,   pct: (etfValue   / totalPortfolio) * 100 },
-        { name: "Cash",   value: cashBalance, pct: (cashBalance / totalPortfolio) * 100 },
+        { name: "Stocks", value: stockValue,   pct: (stockValue   / totalPortfolio) * 100 },
+        { name: "ETFs",   value: etfValue,     pct: (etfValue     / totalPortfolio) * 100 },
+        { name: "Cash",   value: cashBalance,  pct: (cashBalance  / totalPortfolio) * 100 },
       ]
     : [];
 
-  // ── Chart ──
   const chartData: ChartPoint[] = useMemo(
     () => buildChartData(orders, filter, cashBalance),
     [orders, filter, cashBalance]
   );
-  const chartStart   = chartData[0]?.value ?? 0;
-  const chartEnd     = chartData[chartData.length - 1]?.value ?? 0;
-  const chartChange  = chartEnd - chartStart;
-  const chartChangePct = chartStart > 0 ? (chartChange / chartStart) * 100 : 0;
+  const chartStart      = chartData[0]?.value ?? 0;
+  const chartEnd        = chartData[chartData.length - 1]?.value ?? 0;
+  const chartChange     = chartEnd - chartStart;
+  const chartChangePct  = chartStart > 0 ? (chartChange / chartStart) * 100 : 0;
 
-  // ── Activity — merge orders + deposits ──
   const activity: ActivityItem[] = useMemo(() => {
     const items: ActivityItem[] = [];
 
@@ -416,23 +413,20 @@ export default function PortfolioPage() {
       }
     }
 
-    // Sort by date descending and take most recent 8
     return items
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 8);
   }, [orders, deposits]);
 
-  // ── Insights ──
   const largestPosition = ranked[0];
   const largestPct      = largestPosition && totalPortfolio > 0
     ? ((largestPosition.marketValue / totalPortfolio) * 100).toFixed(1)
     : "0";
-  const stockPct         = totalPortfolio > 0 ? ((stockValue / totalPortfolio) * 100).toFixed(0) : "0";
-  const diversification  = Math.min(10, Math.round(holdings.length * 1.5));
+  const stockPct        = totalPortfolio > 0 ? ((stockValue / totalPortfolio) * 100).toFixed(0) : "0";
+  const diversification = Math.min(10, Math.round(holdings.length * 1.5));
 
   const isEmpty = !loading && holdings.length === 0;
 
-  // ── Empty state ──
   if (isEmpty) {
     return (
       <div className="min-h-screen bg-[#F7F7F5] font-sans text-[#111827]">
@@ -592,7 +586,6 @@ export default function PortfolioPage() {
         {/* ── Allocation + Insights ── */}
         {!loading && (
           <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
-            {/* Allocation */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm lg:col-span-2">
               <p className="mb-4 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Allocation</p>
               {allocData.length > 0 ? (
@@ -622,7 +615,6 @@ export default function PortfolioPage() {
               )}
             </div>
 
-            {/* Insights */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm lg:col-span-3">
               <div className="mb-4 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#9CA3AF]" />
@@ -684,9 +676,7 @@ export default function PortfolioPage() {
                       className={`cursor-pointer border-b border-[#F3F4F6] transition-colors last:border-0 ${hoveredHolding === h.symbol ? "bg-[#F7F7F5]" : ""}`}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-[11px] font-bold text-[#374151]">
-                            {h.symbol.slice(0, 2)}
-                          </div>
+                          <AssetLogo symbol={h.symbol} logo={h.logo} size={32} />
                           <div>
                             <p className="text-[13px] font-semibold text-[#111827]">{h.name}</p>
                             <div className="flex items-center gap-1.5">
@@ -726,9 +716,7 @@ export default function PortfolioPage() {
                   onClick={() => router.push(`/trade/${h.symbol}?name=${encodeURIComponent(h.name)}&type=${h.type}&price=${h.currentPrice}`)}
                   className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 active:bg-[#F7F7F5]">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F3F4F6] text-[11px] font-bold text-[#374151]">
-                      {h.symbol.slice(0, 2)}
-                    </div>
+                    <AssetLogo symbol={h.symbol} logo={h.logo} size={36} />
                     <div>
                       <p className="text-[13px] font-semibold text-[#111827]">{h.symbol}</p>
                       <p className="text-[11px] text-[#9CA3AF]">{h.quantity} shares · ${fmt(h.currentPrice)}</p>
@@ -747,8 +735,8 @@ export default function PortfolioPage() {
         {/* ── Top & Worst Performers ── */}
         {!loading && ranked.length > 1 && (
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <PerformersCard title="Top performers"  items={ranked.slice(0, 3)}                     positive />
-            <PerformersCard title="Largest losses"  items={[...ranked].reverse().slice(0, 3)}      positive={false} />
+            <PerformersCard title="Top performers" items={ranked.slice(0, 3)}                positive />
+            <PerformersCard title="Largest losses" items={[...ranked].reverse().slice(0, 3)} positive={false} />
           </div>
         )}
 

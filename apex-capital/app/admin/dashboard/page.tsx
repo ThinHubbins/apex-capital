@@ -1,5 +1,6 @@
 "use client";
 
+import { AssetLogo } from "../../../components/Assetslogo";
 import { useEffect, useState, useCallback } from "react";
 import {
   ShieldCheck, ShieldAlert, Clock, Eye, Check, X,
@@ -8,6 +9,7 @@ import {
   Users, MessageSquare, LayoutDashboard, Wallet, ArrowUp,
   TrendingUp, RotateCcw, Save,
 } from "lucide-react";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,6 +74,7 @@ type UserProfile = {
 type AssetRow = {
   symbol: string;
   name: string;
+  logo: string;
   assetType: "stock" | "etf" | "crypto";
   floor: number;
   ceiling: number;
@@ -1239,8 +1242,8 @@ function PriceAssetRow({
     <div className={"overflow-hidden rounded-2xl border bg-white shadow-sm transition-colors " + (asset.hasOverride ? "border-[#1a6b3c]/30" : "border-[#E5E5E2]")}>
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111827] text-[11px] font-bold text-white">
-            {asset.symbol.slice(0, 3)}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white">
+            <AssetLogo symbol={asset.symbol} logo={asset.logo} size={36} />
           </div>
           <div>
             <div className="flex items-center gap-2">

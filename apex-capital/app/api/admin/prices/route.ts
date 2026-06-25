@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { MOCK_ASSETS, AssetOverride, applyOverride } from "../../../../lib/mockMarketData";
-
-const ADMIN_IDS = ["05d8eb0d-3aa7-404f-ade1-27fe6af3e1bc"];
+import { isAdminId } from "../../../../lib/supabase/admin-auth";
 
 async function isAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user && ADMIN_IDS.includes(user.id);
+  return isAdminId(user?.id);
+
 }
 
 // ─── GET /api/admin/prices ─────────────────────────────────────────
@@ -38,6 +38,7 @@ export async function GET() {
     return {
       symbol:     merged.symbol,
       name:       merged.name,
+      logo:       merged.logo, 
       assetType:  merged.assetType,
       floor:      merged.floor,
       ceiling:    merged.ceiling,

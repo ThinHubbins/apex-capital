@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthUser } from "@/lib/supabase/use-auth-user";
+import { AssetLogo } from "../../components/Assetslogo";
 
 type AssetType = "stock" | "etf" | "crypto";
 
 type Asset = {
   symbol: string;
   name: string;
+   logo: string; 
   assetType: AssetType;
   price: number | null;
   changePercent: number | null;
@@ -138,17 +140,20 @@ export default function Markets() {
                       key={asset.symbol}
                       className="flex items-center justify-between px-5 py-4"
                     >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-bold text-[#111827]">
-                            {asset.symbol}
-                          </span>
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${TYPE_BADGE_STYLES[asset.assetType]}`}>
-                            {asset.assetType}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[13px] text-[#6B7280]">{asset.name}</p>
-                      </div>
+                      <div className="flex items-center gap-3">
+  <AssetLogo symbol={asset.symbol} logo={asset.logo} size={36} />
+  <div>
+    <div className="flex items-center gap-2">
+      <span className="text-[14px] font-bold text-[#111827]">
+        {asset.symbol}
+      </span>
+      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${TYPE_BADGE_STYLES[asset.assetType]}`}>
+        {asset.assetType}
+      </span>
+    </div>
+    <p className="mt-0.5 text-[13px] text-[#6B7280]">{asset.name}</p>
+  </div>
+</div>
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">

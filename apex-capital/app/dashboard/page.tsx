@@ -9,7 +9,9 @@ import {
   ShoppingCart, DollarSign, RefreshCw,
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
+import { AssetLogo } from "../../components/Assetslogo"; // adjust path if needed
 import { createClient } from "../../lib/supabase/client";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +42,7 @@ type Holding = {
   symbol: string;
   name: string;
   type: "stock" | "etf";
+  logo: string;
   shares: number;
   avgCost: number;
   currentPrice: number;
@@ -55,13 +58,33 @@ type ActivityItem = {
   date: string;
 };
 
+// ─── Logo helper ──────────────────────────────────────────────────────────────
+
+const TICKER_DOMAIN: Record<string, string> = {
+  AAPL: "apple.com", MSFT: "microsoft.com", GOOGL: "google.com",
+  AMZN: "amazon.com", TSLA: "tesla.com", NVDA: "nvidia.com",
+  META: "meta.com", NFLX: "netflix.com", DIS: "disney.com",
+  V: "visa.com", JPM: "jpmorganchase.com", KO: "coca-cola.com",
+  SPY: "ssga.com", QQQ: "invesco.com", VTI: "vanguard.com",
+  VXUS: "vanguard.com", VEA: "vanguard.com", EEM: "ishares.com",
+  GLD: "ssga.com",
+};
+
+function getAssetLogo(symbol: string, type: "stock" | "etf" | "crypto"): string {
+  if (type === "crypto") {
+    return `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/64/color/${symbol.toLowerCase()}.png`;
+  }
+  const domain = TICKER_DOMAIN[symbol.toUpperCase()] ?? `${symbol.toLowerCase()}.com`;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ─── Growth Chart (uses real portfolio data points) ───────────────────────────
+// ─── Growth Chart ─────────────────────────────────────────────────────────────
 
 function GrowthChart({ data }: { data: number[] }) {
   if (data.length < 2) return (
@@ -185,7 +208,6 @@ export default function DashboardPage() {
     if (ordersRes.data) setOrders(ordersRes.data as RawOrder[]);
     if (depositsRes.data) setDeposits(depositsRes.data as RawDeposit[]);
 
-    // Build symbol → current price lookup from /api/markets
     const priceMap: Record<string, number> = {};
     for (const asset of marketsRes.results ?? []) {
       if (asset.price != null) priceMap[asset.symbol] = asset.price;
@@ -232,22 +254,22 @@ export default function DashboardPage() {
           symbol,
           name: v.name,
           type: v.type,
+          logo: getAssetLogo(symbol, v.type),
           shares: v.totalQty,
           avgCost,
           currentPrice,
           changePercent,
         };
       })
-      .sort((a, b) => b.shares * b.currentPrice - a.shares * a.currentPrice); // sort by market value desc
+      .sort((a, b) => b.shares * b.currentPrice - a.shares * a.currentPrice);
   }, [orders, liveMarket]);
 
   // ── Portfolio totals ──
   const totals = useMemo(() => {
-    const marketValue = holdings.reduce((s, h) => s + h.shares * h.currentPrice, 0);
-    const costBasis   = holdings.reduce((s, h) => s + h.shares * h.avgCost, 0);
+    const marketValue      = holdings.reduce((s, h) => s + h.shares * h.currentPrice, 0);
+    const costBasis        = holdings.reduce((s, h) => s + h.shares * h.avgCost, 0);
     const totalGainValue   = marketValue - costBasis;
     const totalGainPercent = costBasis > 0 ? (totalGainValue / costBasis) * 100 : 0;
-    // Day change: sum of (shares × currentPrice × changePercent/100) — proxy since we don't have prev close
     const dayChangeValue   = holdings.reduce((s, h) => s + h.shares * h.currentPrice * (h.changePercent / 100), 0);
     const dayChangePercent = marketValue > 0 ? (dayChangeValue / (marketValue - dayChangeValue || 1)) * 100 : 0;
     return {
@@ -260,7 +282,7 @@ export default function DashboardPage() {
     };
   }, [holdings, cashBalance]);
 
-  // ── Build simple chart series from order history ──
+  // ── Build chart series ──
   const growthSeries: number[] = useMemo(() => {
     const filled = [...orders]
       .filter((o) => o.filled_at)
@@ -268,20 +290,17 @@ export default function DashboardPage() {
 
     if (filled.length === 0) return [];
 
-    let running = cashBalance; // start with current cash and work backwards isn't perfect, so build forward
-    running = 0;
+    let running = 0;
     const series: number[] = [];
-
     for (const o of filled) {
       running += o.side === "buy" ? o.total_value : -o.total_value;
       series.push(Math.max(0, running));
     }
-    // Append current total portfolio value as the final point
     series.push(totals.portfolioValue);
     return series;
   }, [orders, cashBalance, totals.portfolioValue]);
 
-  // ── Recent activity — merge orders + deposits ──
+  // ── Recent activity ──
   const activity: ActivityItem[] = useMemo(() => {
     const items: ActivityItem[] = [];
 
@@ -338,7 +357,7 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
 
-        {/* ── Header with refresh ── */}
+        {/* ── Header ── */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-[22px] font-extrabold tracking-tight text-[#111827]">Dashboard</h1>
@@ -423,7 +442,6 @@ export default function DashboardPage() {
 
           {/* Side cards */}
           <div className="flex flex-col gap-5">
-            {/* Available cash */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
               <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Available cash</p>
               <p className="mt-1.5 text-[24px] font-bold text-[#111827]">${fmt(cashBalance)}</p>
@@ -439,7 +457,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Total gain/loss */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
               <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Total gain / loss</p>
               <p className={`mt-1.5 text-[24px] font-bold ${totals.totalGainValue >= 0 ? "text-[#1a6b3c]" : "text-red-600"}`}>
@@ -502,9 +519,7 @@ export default function DashboardPage() {
                       href={`/trade/${h.symbol}?name=${encodeURIComponent(h.name)}&type=${h.type}&price=${h.currentPrice}`}
                       className="-mx-2 flex items-center justify-between rounded-lg px-2 py-3.5 transition-colors hover:bg-[#F7F7F5]">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-[11px] font-bold text-[#111827]">
-                          {h.symbol.slice(0, 2)}
-                        </span>
+                        <AssetLogo symbol={h.symbol} logo={h.logo} size={36} />
                         <div>
                           <p className="text-[14px] font-semibold text-[#111827]">{h.symbol}</p>
                           <p className="text-[12px] text-[#9CA3AF]">

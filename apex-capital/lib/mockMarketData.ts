@@ -13,6 +13,12 @@
 // lands there. Set `intensity` (override: intensity, 0..1) to control
 // how wild that wandering looks: 0 = calm/flat, 1 = chaotic swings.
 // Both are optional — assets without them behave exactly as before.
+//
+// ── Logos ────────────────────────────────────────────────────────────
+// `logo` is a static, deterministic URL derived from the symbol — no API
+// key required. Stocks/ETFs use logo.dev's ticker endpoint; crypto uses
+// a public crypto-icon CDN keyed by lowercase symbol. If a logo fails to
+// load client-side, fall back to rendering the symbol/initials instead.
 
 export type PricePoint = { time: number; price: number };
 export type AssetType = "stock" | "etf" | "crypto";
@@ -24,6 +30,7 @@ export type MockAsset = {
   floor: number;
   ceiling: number;
   startPrice: number;
+  logo: string;          // URL to the asset's logo/icon
   endPrice?: number;     // exact price to land on by end of day (scripted demo mode)
   intensity?: number;    // 0 (calm) .. 1 (wild) — overrides volatility/reversion when set
   volatility?: number;
@@ -57,40 +64,79 @@ const DEFAULT_REVERSION: Record<AssetType, number> = {
   etf: 0.06,
 };
 
+// ─── Logo helpers ──────────────────────────────────────────────────
+// No API key needed for either source.
+
+// Maps a ticker to the company's primary domain, then fetches that
+// domain's favicon via Google's public favicon service — no API key,
+// no signup, works directly in an <img src>.
+const TICKER_DOMAIN: Record<string, string> = {
+  AAPL: "apple.com",
+  MSFT: "microsoft.com",
+  GOOGL: "google.com",
+  AMZN: "amazon.com",
+  TSLA: "tesla.com",
+  NVDA: "nvidia.com",
+  META: "meta.com",
+  NFLX: "netflix.com",
+  DIS: "disney.com",
+  V: "visa.com",
+  JPM: "jpmorganchase.com",
+  KO: "coca-cola.com",
+  SPY: "ssga.com",
+  QQQ: "invesco.com",
+  VTI: "vanguard.com",
+  VXUS: "vanguard.com",
+  VEA: "vanguard.com",
+  EEM: "ishares.com",
+  GLD: "ssga.com",
+};
+
+function stockLogo(ticker: string): string {
+  const domain = TICKER_DOMAIN[ticker.toUpperCase()] ?? `${ticker.toLowerCase()}.com`;
+  // Google's favicon service — public, no key, no rate-limit signup.
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
+function cryptoLogo(symbol: string): string {
+  // Public crypto icon CDN, keyed by lowercase symbol (color, 64px).
+  return `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/64/color/${symbol.toLowerCase()}.png`;
+}
+
 // ─── Asset universe ────────────────────────────────────────────────
 
 export const MOCK_STOCKS: MockAsset[] = [
-  { symbol: "AAPL",  name: "Apple Inc.",                  assetType: "stock", floor: 195, ceiling: 230, startPrice: 212 },
-  { symbol: "MSFT",  name: "Microsoft Corporation",       assetType: "stock", floor: 380, ceiling: 430, startPrice: 405 },
-  { symbol: "GOOGL", name: "Alphabet Inc.",               assetType: "stock", floor: 150, ceiling: 185, startPrice: 168 },
-  { symbol: "AMZN",  name: "Amazon.com, Inc.",            assetType: "stock", floor: 170, ceiling: 200, startPrice: 185 },
-  { symbol: "TSLA",  name: "Tesla, Inc.",                 assetType: "stock", floor: 220, ceiling: 280, startPrice: 250 },
-  { symbol: "NVDA",  name: "NVIDIA Corporation",          assetType: "stock", floor: 110, ceiling: 145, startPrice: 128 },
-  { symbol: "META",  name: "Meta Platforms, Inc.",        assetType: "stock", floor: 480, ceiling: 560, startPrice: 520 },
-  { symbol: "NFLX",  name: "Netflix, Inc.",               assetType: "stock", floor: 600, ceiling: 700, startPrice: 650 },
-  { symbol: "DIS",   name: "The Walt Disney Company",     assetType: "stock", floor: 90,  ceiling: 115, startPrice: 102 },
-  { symbol: "V",     name: "Visa Inc.",                   assetType: "stock", floor: 260, ceiling: 300, startPrice: 280 },
-  { symbol: "JPM",   name: "JPMorgan Chase & Co.",        assetType: "stock", floor: 190, ceiling: 230, startPrice: 210 },
-  { symbol: "KO",    name: "The Coca-Cola Company",       assetType: "stock", floor: 60,  ceiling: 70,  startPrice: 65  },
+  { symbol: "AAPL",  name: "Apple Inc.",                  assetType: "stock", floor: 195, ceiling: 230, startPrice: 212, logo: stockLogo("AAPL")  },
+  { symbol: "MSFT",  name: "Microsoft Corporation",       assetType: "stock", floor: 380, ceiling: 430, startPrice: 405, logo: stockLogo("MSFT")  },
+  { symbol: "GOOGL", name: "Alphabet Inc.",               assetType: "stock", floor: 150, ceiling: 185, startPrice: 168, logo: stockLogo("GOOGL") },
+  { symbol: "AMZN",  name: "Amazon.com, Inc.",            assetType: "stock", floor: 170, ceiling: 200, startPrice: 185, logo: stockLogo("AMZN")  },
+  { symbol: "TSLA",  name: "Tesla, Inc.",                 assetType: "stock", floor: 220, ceiling: 280, startPrice: 250, logo: stockLogo("TSLA")  },
+  { symbol: "NVDA",  name: "NVIDIA Corporation",          assetType: "stock", floor: 110, ceiling: 145, startPrice: 128, logo: stockLogo("NVDA")  },
+  { symbol: "META",  name: "Meta Platforms, Inc.",        assetType: "stock", floor: 480, ceiling: 560, startPrice: 520, logo: stockLogo("META")  },
+  { symbol: "NFLX",  name: "Netflix, Inc.",               assetType: "stock", floor: 600, ceiling: 700, startPrice: 650, logo: stockLogo("NFLX")  },
+  { symbol: "DIS",   name: "The Walt Disney Company",     assetType: "stock", floor: 90,  ceiling: 115, startPrice: 102, logo: stockLogo("DIS")   },
+  { symbol: "V",     name: "Visa Inc.",                   assetType: "stock", floor: 260, ceiling: 300, startPrice: 280, logo: stockLogo("V")     },
+  { symbol: "JPM",   name: "JPMorgan Chase & Co.",        assetType: "stock", floor: 190, ceiling: 230, startPrice: 210, logo: stockLogo("JPM")   },
+  { symbol: "KO",    name: "The Coca-Cola Company",       assetType: "stock", floor: 60,  ceiling: 70,  startPrice: 65,  logo: stockLogo("KO")    },
 ];
 
 export const MOCK_ETFS: MockAsset[] = [
-  { symbol: "SPY",  name: "SPDR S&P 500 ETF Trust",                 assetType: "etf", floor: 540, ceiling: 600, startPrice: 570 },
-  { symbol: "QQQ",  name: "Invesco QQQ Trust",                      assetType: "etf", floor: 460, ceiling: 520, startPrice: 490 },
-  { symbol: "VTI",  name: "Vanguard Total Stock Market ETF",        assetType: "etf", floor: 260, ceiling: 300, startPrice: 280 },
-  { symbol: "VXUS", name: "Vanguard Total International Stock ETF", assetType: "etf", floor: 55,  ceiling: 65,  startPrice: 60  },
-  { symbol: "VEA",  name: "Vanguard Developed Markets ETF",         assetType: "etf", floor: 48,  ceiling: 56,  startPrice: 52  },
-  { symbol: "EEM",  name: "iShares MSCI Emerging Markets ETF",      assetType: "etf", floor: 38,  ceiling: 46,  startPrice: 42  },
-  { symbol: "GLD",  name: "SPDR Gold Shares",                       assetType: "etf", floor: 230, ceiling: 270, startPrice: 250 },
+  { symbol: "SPY",  name: "SPDR S&P 500 ETF Trust",                 assetType: "etf", floor: 540, ceiling: 600, startPrice: 570, logo: stockLogo("SPY")  },
+  { symbol: "QQQ",  name: "Invesco QQQ Trust",                      assetType: "etf", floor: 460, ceiling: 520, startPrice: 490, logo: stockLogo("QQQ")  },
+  { symbol: "VTI",  name: "Vanguard Total Stock Market ETF",        assetType: "etf", floor: 260, ceiling: 300, startPrice: 280, logo: stockLogo("VTI")  },
+  { symbol: "VXUS", name: "Vanguard Total International Stock ETF", assetType: "etf", floor: 55,  ceiling: 65,  startPrice: 60,  logo: stockLogo("VXUS") },
+  { symbol: "VEA",  name: "Vanguard Developed Markets ETF",         assetType: "etf", floor: 48,  ceiling: 56,  startPrice: 52,  logo: stockLogo("VEA")  },
+  { symbol: "EEM",  name: "iShares MSCI Emerging Markets ETF",      assetType: "etf", floor: 38,  ceiling: 46,  startPrice: 42,  logo: stockLogo("EEM")  },
+  { symbol: "GLD",  name: "SPDR Gold Shares",                       assetType: "etf", floor: 230, ceiling: 270, startPrice: 250, logo: stockLogo("GLD")  },
 ];
 
 export const MOCK_CRYPTO: MockAsset[] = [
-  { symbol: "BTC",  name: "Bitcoin",  assetType: "crypto", floor: 58000, ceiling: 65000, startPrice: 61500 },
-  { symbol: "ETH",  name: "Ethereum", assetType: "crypto", floor: 2800,  ceiling: 3400,  startPrice: 3100  },
-  { symbol: "SOL",  name: "Solana",   assetType: "crypto", floor: 120,   ceiling: 165,   startPrice: 142   },
-  { symbol: "XRP",  name: "XRP",      assetType: "crypto", floor: 0.45,  ceiling: 0.62,  startPrice: 0.53  },
-  { symbol: "ADA",  name: "Cardano",  assetType: "crypto", floor: 0.32,  ceiling: 0.45,  startPrice: 0.38  },
-  { symbol: "DOGE", name: "Dogecoin", assetType: "crypto", floor: 0.08,  ceiling: 0.12,  startPrice: 0.1   },
+  { symbol: "BTC",  name: "Bitcoin",  assetType: "crypto", floor: 58000, ceiling: 65000, startPrice: 61500, logo: cryptoLogo("btc")  },
+  { symbol: "ETH",  name: "Ethereum", assetType: "crypto", floor: 2800,  ceiling: 3400,  startPrice: 3100,  logo: cryptoLogo("eth")  },
+  { symbol: "SOL",  name: "Solana",   assetType: "crypto", floor: 120,   ceiling: 165,   startPrice: 142,   logo: cryptoLogo("sol")  },
+  { symbol: "XRP",  name: "XRP",      assetType: "crypto", floor: 0.45,  ceiling: 0.62,  startPrice: 0.53,  logo: cryptoLogo("xrp")  },
+  { symbol: "ADA",  name: "Cardano",  assetType: "crypto", floor: 0.32,  ceiling: 0.45,  startPrice: 0.38,  logo: cryptoLogo("ada")  },
+  { symbol: "DOGE", name: "Dogecoin", assetType: "crypto", floor: 0.08,  ceiling: 0.12,  startPrice: 0.1,   logo: cryptoLogo("doge") },
 ];
 
 export const MOCK_ASSETS: MockAsset[] = [...MOCK_STOCKS, ...MOCK_ETFS, ...MOCK_CRYPTO];
@@ -301,6 +347,7 @@ export function getMockQuote(asset: MockAsset) {
     symbol:        asset.symbol,
     name:          asset.name,
     assetType:     asset.assetType,
+    logo:          asset.logo,
     price:         current.price,
     changePercent: Math.round(changePercent * 100) / 100,
   };

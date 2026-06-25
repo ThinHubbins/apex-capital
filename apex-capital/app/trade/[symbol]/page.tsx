@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import MockCryptoChart from "@/components/MockCryptoChart";
 import { getMockDailySeries, type AssetType, type MockAsset } from "@/lib/mockMarketData";
+import { AssetLogo } from "@/components/Assetslogo";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -694,9 +695,7 @@ export default function TradePage() {
           {/* Asset header */}
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5E5E2] bg-white text-[12px] font-extrabold text-[#374151] shadow-sm">
-                {symbol.slice(0, 2)}
-              </div>
+              <AssetLogo symbol={symbol} logo={mockAsset?.logo ?? ""} size={44} />
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-[20px] font-extrabold tracking-tight text-[#111827]">{symbol}</h1>

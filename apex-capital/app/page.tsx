@@ -19,6 +19,9 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { AssetLogo } from "../components/Assetslogo";
+import { getMockAsset } from "../lib/mockMarketData";
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -228,7 +231,7 @@ export default function Home() {
     let cancelled = false;
     async function fetchQuotes() {
       try {
-        const res = await fetch("/api/quotes");
+        const res = await fetch("/api/markets");
         const data = await res.json();
         if (cancelled) return;
         if (data.error && (!data.results || data.results.length === 0)) {
@@ -238,7 +241,7 @@ export default function Home() {
         }
         setQuotes(data.results ?? []);
       } catch {
-        if (!cancelled) setQuotesError("Could not reach the quotes API.");
+        if (!cancelled) setQuotesError("Could not reach the markets API.");
       } finally {
         if (!cancelled) setQuotesLoading(false);
       }
@@ -285,9 +288,9 @@ export default function Home() {
   const portfolioGain = portfolioValue * (avgChangePercent / 100);
 
   // Quotes ranked by today's % change, best performer first.
-  const rankedQuotes = [...quotes].sort(
-    (a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity),
-  );
+const rankedQuotes = [...quotes]
+  .sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity))
+  .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-[#F7F7F5] font-sans text-[#111827]">
@@ -394,6 +397,11 @@ export default function Home() {
                             >
                               {i + 1}
                             </span>
+                            <AssetLogo
+                              symbol={q.symbol}
+                              logo={getMockAsset(q.symbol)?.logo ?? ""}
+                              size={22}
+                            />
                             <span className="text-[14px] font-semibold text-[#111827]">
                               {q.symbol}
                             </span>
@@ -434,37 +442,40 @@ export default function Home() {
         <section className="border-y border-[#E5E5E2] bg-white">
           <div className="mx-auto max-w-7xl overflow-x-auto px-6 py-0 lg:px-10">
             <div className="flex min-w-[700px] divide-x divide-[#F3F4F6]">
-              {quotesLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="flex-1 animate-pulse px-5 py-4">
-                      <div className="h-3 w-10 rounded bg-[#F3F4F6]" />
-                      <div className="mt-2 h-5 w-16 rounded bg-[#F3F4F6]" />
-                    </div>
-                  ))
-                : quotes.map((q) => {
-                    const up = (q.changePercent ?? 0) >= 0;
-                    return (
-                      <div key={q.symbol} className="flex-1 px-5 py-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[13px] font-semibold text-[#111827]">
-                            {q.symbol}
-                          </span>
-                          <span
-                            className={`text-[12px] font-medium ${
-                              up ? "text-[#1a6b3c]" : "text-red-500"
-                            }`}
-                          >
-                            {q.changePercent !== null
-                              ? `${up ? "+" : ""}${q.changePercent.toFixed(1)}%`
-                              : "—"}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[15px] font-bold text-[#111827]">
-                          {q.price !== null ? `$${q.price.toFixed(2)}` : "N/A"}
-                        </p>
-                      </div>
-                    );
-                  })}
+              {quotesLoading ? (
+  <div className="flex divide-x divide-[#F3F4F6]">
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div key={i} className="animate-pulse px-5 py-4">
+        <div className="h-3 w-10 rounded bg-[#F3F4F6]" />
+        <div className="mt-2 h-5 w-16 rounded bg-[#F3F4F6]" />
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="overflow-hidden">
+    <div className="flex w-max animate-[marquee_30s_linear_infinite] gap-0">
+      {[...quotes, ...quotes].map((q, i) => {
+        const up = (q.changePercent ?? 0) >= 0;
+        return (
+          <div key={`${q.symbol}-${i}`} className="flex-shrink-0 border-r border-[#F3F4F6] px-5 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#111827]">
+                <AssetLogo symbol={q.symbol} logo={getMockAsset(q.symbol)?.logo ?? ""} size={18} />
+                {q.symbol}
+              </span>
+              <span className={`text-[12px] font-medium ${up ? "text-[#1a6b3c]" : "text-red-500"}`}>
+                {q.changePercent !== null ? `${up ? "+" : ""}${q.changePercent.toFixed(1)}%` : "—"}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[15px] font-bold text-[#111827]">
+              {q.price !== null ? `$${q.price.toFixed(2)}` : "N/A"}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
             </div>
           </div>
         </section>

@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "../../../../lib/notifications";
+import { isAdminId } from "../../../../lib/supabase/admin-auth";
+import { createClient } from "../../../../lib/supabase/server";
+
+async function isAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return isAdminId(user?.id);
+}
 
 export async function GET(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const status = req.nextUrl.searchParams.get("status") ?? "pending";
   const admin = createAdminClient();
 
@@ -35,6 +47,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { withdrawalId, userId, action, rejectionReason } = await req.json();
 
   if (!withdrawalId || !userId || (action !== "approve" && action !== "reject")) {
