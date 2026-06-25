@@ -1,9 +1,10 @@
 "use client";
 
+import { PricePoint } from "@/lib/mockMarketData";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine,
 } from "recharts";
-import type { PricePoint } from "@/lib/mockCrypto";
+
 
 export default function MockCryptoChart({
   series,
@@ -43,7 +44,7 @@ export default function MockCryptoChart({
             <ReferenceLine y={ceiling} stroke="#E5E5E2" strokeDasharray="4 4" />
             <ReferenceLine y={floor} stroke="#E5E5E2" strokeDasharray="4 4" />
             <Tooltip
-              formatter={(value: number) => [`$${fmtPrice(value)}`, "Price"]}
+             formatter={(value) => [`$${fmtPrice(value as number)}`, "Price"]}
               labelFormatter={(t) =>
                 new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
               }

@@ -6,7 +6,16 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
-function NewsCard({ item }: { item: NewsItem }) {
+type NewsItem = {
+  url: string;
+  image: string;
+  headline: string;
+  category?: string;
+  summary?: string;
+  source: string;
+};
+
+export function NewsCard({ item }: { item: NewsItem }) {
   return (
     <Link
       href={item.url}
