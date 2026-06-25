@@ -372,7 +372,7 @@ export default function CompleteVerificationPage() {
         bucket: string,
         filename: string
       ): Promise<string | null> {
-        if (!dataUrl) return null;
+        if (!dataUrl || !user) return null;
         const { blob, contentType, ext } = dataUrlToBlob(dataUrl);
         const path = `${user.id}/${filename}-${Date.now()}.${ext}`;
 
