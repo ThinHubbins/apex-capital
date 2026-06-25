@@ -804,10 +804,10 @@ export default function Home() {
                 {isLoggedIn ? "Go to Dashboard" : "Get Started Now"}
               </Link>
               <Link
-                href="/sales"
+                href="/about-us"
                 className="rounded-lg border border-[#D1D5DB] bg-white px-6 py-3 text-[14px] font-medium text-[#111827] transition-colors hover:bg-[#F9FAFB]"
               >
-                Talk to Sales
+                About Us
               </Link>
             </div>
 

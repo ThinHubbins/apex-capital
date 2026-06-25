@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createNotification } from "../../../../lib/notifications";
-
-const ADMIN_IDS = ["05d8eb0d-3aa7-404f-ade1-27fe6af3e1bc"];
+import { isAdminId } from "../../../../lib/supabase/admin-auth";
 
 async function isAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user && ADMIN_IDS.includes(user.id);
-}
+  return isAdminId(user?.id);
 
+}
 // front/back live in "kyc-documents", selfie lives in "kyc-selfies" —
 // matches the buckets used in /api/kyc/submit's uploadImage().
 async function signPath(

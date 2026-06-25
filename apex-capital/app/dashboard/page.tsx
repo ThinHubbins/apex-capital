@@ -1,58 +1,89 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShieldAlert, Clock, ArrowUpRight, ArrowDownRight, Plus, Minus,
-  ArrowDown, ArrowUp, Wallet, TrendingUp, TrendingDown, ChevronRight, X, Loader2,
+  Wallet, TrendingUp, TrendingDown, ChevronRight, X, Loader2,
+  ShoppingCart, DollarSign, RefreshCw,
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import { createClient } from "../../lib/supabase/client";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type KycStatus = "unverified" | "pending" | "verified" | "rejected";
 
-/* ------------------------------------------------------------------ */
-/*  Mock data — replace with real API calls when tables are ready      */
-/* ------------------------------------------------------------------ */
+type RawOrder = {
+  id: string;
+  symbol: string;
+  asset_name: string;
+  asset_type: "stock" | "etf";
+  side: "buy" | "sell";
+  quantity: number;
+  price_at_execution: number;
+  total_value: number;
+  status: string;
+  filled_at: string | null;
+  created_at: string;
+};
 
-type Holding = { symbol: string; name: string; shares: number; avgCost: number; price: number; changePercent: number };
+type RawDeposit = {
+  id: string;
+  amount: number;
+  status: string;
+  submitted_at: string;
+};
 
-const holdings: Holding[] = [
-  { symbol: "AAPL", name: "Apple Inc.", shares: 12, avgCost: 178.2, price: 196.45, changePercent: 1.34 },
-  { symbol: "MSFT", name: "Microsoft Corp.", shares: 5, avgCost: 392.1, price: 421.08, changePercent: 0.62 },
-  { symbol: "NVDA", name: "NVIDIA Corp.", shares: 8, avgCost: 101.4, price: 124.86, changePercent: -2.18 },
-  { symbol: "VOO", name: "Vanguard S&P 500 ETF", shares: 6, avgCost: 478.3, price: 512.77, changePercent: 0.41 },
-  { symbol: "AMZN", name: "Amazon.com Inc.", shares: 10, avgCost: 168.5, price: 186.92, changePercent: 0.88 },
-];
+type Holding = {
+  symbol: string;
+  name: string;
+  type: "stock" | "etf";
+  shares: number;
+  avgCost: number;
+  currentPrice: number;
+  changePercent: number;
+};
 
-const activity = [
-  { id: 1, type: "buy", label: "Bought AAPL", detail: "2 shares", amount: -392.9, date: "Jun 18" },
-  { id: 2, type: "deposit", label: "Deposit", detail: "Bank transfer", amount: 1000, date: "Jun 16" },
-  { id: 3, type: "sell", label: "Sold TSLA", detail: "3 shares", amount: 742.5, date: "Jun 12" },
-  { id: 4, type: "dividend", label: "Dividend", detail: "VOO", amount: 14.62, date: "Jun 9" },
-];
+type ActivityItem = {
+  id: string;
+  kind: "buy" | "sell" | "deposit" | "withdrawal";
+  label: string;
+  detail: string;
+  amount: number;
+  date: string;
+};
 
-const growthSeries = [
-  24100, 24350, 24200, 24600, 24580, 24910, 25040, 24890, 25210, 25430,
-  25380, 25600, 25750, 25690, 26010, 26240, 26180, 26430, 26390, 26710,
-  26850, 26790, 27040, 27260, 27190, 27430, 27610, 27580, 27840, 28012,
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/* ------------------------------------------------------------------ */
-/*  Small building blocks                                              */
-/* ------------------------------------------------------------------ */
+function fmt(n: number) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─── Growth Chart (uses real portfolio data points) ───────────────────────────
 
 function GrowthChart({ data }: { data: number[] }) {
+  if (data.length < 2) return (
+    <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-[#E5E5E2]">
+      <p className="text-[13px] text-[#9CA3AF]">No chart data yet</p>
+    </div>
+  );
+
   const width = 600;
   const height = 160;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const points = data.map((v, i) => [(i / (data.length - 1)) * width, height - ((v - min) / range) * height]);
+  const points = data.map((v, i) => [
+    (i / (data.length - 1)) * width,
+    height - ((v - min) / range) * height,
+  ]);
   const linePath = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
   const isUp = data[data.length - 1] >= data[0];
   const stroke = isUp ? "#1a6b3c" : "#dc2626";
+
   return (
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-40 w-full">
       <defs>
@@ -67,63 +98,227 @@ function GrowthChart({ data }: { data: number[] }) {
   );
 }
 
-function QuickAction({ href, icon: Icon, label, variant = "default" }: { href: string; icon: typeof Plus; label: string; variant?: "default" | "primary" }) {
+// ─── Activity icon ─────────────────────────────────────────────────────────────
+
+function ActivityIcon({ kind }: { kind: ActivityItem["kind"] }) {
+  const map: Record<ActivityItem["kind"], { icon: React.ElementType; bg: string; color: string }> = {
+    buy:        { icon: ShoppingCart,   bg: "bg-[#EEF2FF]", color: "text-indigo-600" },
+    sell:       { icon: ArrowUpRight,   bg: "bg-[#F0F7F2]", color: "text-[#1a6b3c]" },
+    deposit:    { icon: ArrowDownRight, bg: "bg-[#F0F7F2]", color: "text-[#1a6b3c]" },
+    withdrawal: { icon: Minus,          bg: "bg-red-50",    color: "text-red-600" },
+  };
+  const { icon: Icon, bg, color } = map[kind];
   return (
-    <Link href={href} className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 transition-colors ${
-      variant === "primary" ? "border-[#111827] bg-[#111827] text-white hover:opacity-90" : "border-[#E5E5E2] bg-white text-[#111827] hover:bg-[#F7F7F5]"
-    }`}>
-      <Icon className={`h-5 w-5 ${variant === "primary" ? "text-white" : "text-[#111827]"}`} strokeWidth={1.75} />
-      <span className="text-[13px] font-medium">{label}</span>
-    </Link>
+    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
+      <Icon className={`h-4 w-4 ${color}`} />
+    </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const router = useRouter();
+
   const [kycStatus, setKycStatus] = useState<KycStatus>("unverified");
-  const [userInitials, setUserInitials] = useState("JD");
+  const [userInitials, setUserInitials] = useState("--");
+  const [cashBalance, setCashBalance] = useState(0);
+  const [orders, setOrders] = useState<RawOrder[]>([]);
+  const [deposits, setDeposits] = useState<RawDeposit[]>([]);
+  const [liveMarket, setLiveMarket] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
+  // ── Auth guard ──
   useEffect(() => {
-    async function loadProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) router.replace("/login");
+    });
+  }, []);
 
-      const { data } = await supabase
+  // ── Fetch all real data ──
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const [profileRes, ordersRes, depositsRes, marketsRes] = await Promise.all([
+      supabase
         .from("profiles")
-        .select("kyc_status, full_name")
+        .select("kyc_status, full_name, cash_balance")
         .eq("id", user.id)
-        .single();
+        .single(),
+      supabase
+        .from("orders")
+        .select("id, symbol, asset_name, asset_type, side, quantity, price_at_execution, total_value, status, filled_at, created_at")
+        .eq("user_id", user.id)
+        .eq("status", "filled")
+        .order("filled_at", { ascending: false }),
+      supabase
+        .from("deposits")
+        .select("id, amount, status, submitted_at")
+        .eq("user_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(10),
+      fetch("/api/markets").then((r) => r.json()).catch(() => ({ results: [] })),
+    ]);
 
-      if (data) {
-        setKycStatus(data.kyc_status as KycStatus);
-        if (data.full_name) {
-          setUserInitials(
-            data.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-          );
-        }
+    if (profileRes.data) {
+      setKycStatus(profileRes.data.kyc_status as KycStatus);
+      setCashBalance(Number(profileRes.data.cash_balance ?? 0));
+      if (profileRes.data.full_name) {
+        setUserInitials(
+          profileRes.data.full_name
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()
+        );
       }
-      setLoading(false);
     }
-    loadProfile();
+
+    if (ordersRes.data) setOrders(ordersRes.data as RawOrder[]);
+    if (depositsRes.data) setDeposits(depositsRes.data as RawDeposit[]);
+
+    // Build symbol → current price lookup from /api/markets
+    const priceMap: Record<string, number> = {};
+    for (const asset of marketsRes.results ?? []) {
+      if (asset.price != null) priceMap[asset.symbol] = asset.price;
+    }
+    setLiveMarket(priceMap);
+
+    setLoading(false);
+    setRefreshing(false);
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
+  // ── Derive holdings from filled orders ──
+  const holdings: Holding[] = useMemo(() => {
+    const map: Record<string, {
+      name: string;
+      type: "stock" | "etf";
+      totalQty: number;
+      totalCost: number;
+    }> = {};
+
+    for (const o of orders) {
+      if (!map[o.symbol]) {
+        map[o.symbol] = { name: o.asset_name, type: o.asset_type, totalQty: 0, totalCost: 0 };
+      }
+      const qty = Number(o.quantity);
+      const price = Number(o.price_at_execution);
+      if (o.side === "buy") {
+        map[o.symbol].totalQty += qty;
+        map[o.symbol].totalCost += qty * price;
+      } else {
+        map[o.symbol].totalQty -= qty;
+        map[o.symbol].totalCost -= qty * price;
+      }
+    }
+
+    return Object.entries(map)
+      .filter(([, v]) => v.totalQty > 0.0001)
+      .map(([symbol, v]) => {
+        const avgCost = v.totalQty > 0 ? v.totalCost / v.totalQty : 0;
+        const currentPrice = liveMarket[symbol] ?? avgCost;
+        const changePercent = avgCost > 0 ? ((currentPrice - avgCost) / avgCost) * 100 : 0;
+        return {
+          symbol,
+          name: v.name,
+          type: v.type,
+          shares: v.totalQty,
+          avgCost,
+          currentPrice,
+          changePercent,
+        };
+      })
+      .sort((a, b) => b.shares * b.currentPrice - a.shares * a.currentPrice); // sort by market value desc
+  }, [orders, liveMarket]);
+
+  // ── Portfolio totals ──
   const totals = useMemo(() => {
-    const marketValue = holdings.reduce((sum, h) => sum + h.shares * h.price, 0);
-    const costBasis = holdings.reduce((sum, h) => sum + h.shares * h.avgCost, 0);
-    const cashBalance = 1842.31;
-    const dayChangeValue = holdings.reduce((sum, h) => sum + h.shares * h.price * (h.changePercent / 100), 0);
-    const dayChangePercent = marketValue > 0 ? (dayChangeValue / (marketValue - dayChangeValue)) * 100 : 0;
-    const totalGainValue = marketValue - costBasis;
+    const marketValue = holdings.reduce((s, h) => s + h.shares * h.currentPrice, 0);
+    const costBasis   = holdings.reduce((s, h) => s + h.shares * h.avgCost, 0);
+    const totalGainValue   = marketValue - costBasis;
     const totalGainPercent = costBasis > 0 ? (totalGainValue / costBasis) * 100 : 0;
-    return { portfolioValue: marketValue + cashBalance, marketValue, cashBalance, dayChangeValue, dayChangePercent, totalGainValue, totalGainPercent };
-  }, []);
+    // Day change: sum of (shares × currentPrice × changePercent/100) — proxy since we don't have prev close
+    const dayChangeValue   = holdings.reduce((s, h) => s + h.shares * h.currentPrice * (h.changePercent / 100), 0);
+    const dayChangePercent = marketValue > 0 ? (dayChangeValue / (marketValue - dayChangeValue || 1)) * 100 : 0;
+    return {
+      portfolioValue: marketValue + cashBalance,
+      marketValue,
+      dayChangeValue,
+      dayChangePercent,
+      totalGainValue,
+      totalGainPercent,
+    };
+  }, [holdings, cashBalance]);
 
+  // ── Build simple chart series from order history ──
+  const growthSeries: number[] = useMemo(() => {
+    const filled = [...orders]
+      .filter((o) => o.filled_at)
+      .sort((a, b) => new Date(a.filled_at!).getTime() - new Date(b.filled_at!).getTime());
+
+    if (filled.length === 0) return [];
+
+    let running = cashBalance; // start with current cash and work backwards isn't perfect, so build forward
+    running = 0;
+    const series: number[] = [];
+
+    for (const o of filled) {
+      running += o.side === "buy" ? o.total_value : -o.total_value;
+      series.push(Math.max(0, running));
+    }
+    // Append current total portfolio value as the final point
+    series.push(totals.portfolioValue);
+    return series;
+  }, [orders, cashBalance, totals.portfolioValue]);
+
+  // ── Recent activity — merge orders + deposits ──
+  const activity: ActivityItem[] = useMemo(() => {
+    const items: ActivityItem[] = [];
+
+    for (const o of orders.slice(0, 8)) {
+      items.push({
+        id: o.id,
+        kind: o.side,
+        label: `${o.side === "buy" ? "Bought" : "Sold"} ${o.symbol}`,
+        detail: `${Number(o.quantity)} share${Number(o.quantity) !== 1 ? "s" : ""}`,
+        amount: o.side === "buy" ? -Number(o.total_value) : Number(o.total_value),
+        date: new Date(o.filled_at ?? o.created_at).toLocaleDateString("en-US", {
+          day: "numeric", month: "short",
+        }),
+      });
+    }
+
+    for (const d of deposits.slice(0, 5)) {
+      if (d.status === "approved" || d.status === "pending") {
+        items.push({
+          id: d.id,
+          kind: "deposit",
+          label: d.status === "approved" ? "Deposit approved" : "Deposit pending",
+          detail: "Bank transfer",
+          amount: Number(d.amount),
+          date: new Date(d.submitted_at).toLocaleDateString("en-US", {
+            day: "numeric", month: "short",
+          }),
+        });
+      }
+    }
+
+    return items
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 6);
+  }, [orders, deposits]);
+
+  // ── Loading state ──
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F7F5] font-sans">
@@ -142,7 +337,28 @@ export default function DashboardPage() {
       <Navbar variant="auth" kycStatus={kycStatus} userInitials={userInitials} />
 
       <main className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
-        {/* KYC banner */}
+
+        {/* ── Header with refresh ── */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-[22px] font-extrabold tracking-tight text-[#111827]">Dashboard</h1>
+            <p className="mt-0.5 text-[13px] text-[#9CA3AF]">
+              Updated {new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 rounded-xl border border-[#E5E5E2] bg-white px-3.5 py-2 text-[13px] font-medium text-[#6B7280] shadow-sm hover:text-[#111827] disabled:opacity-50"
+          >
+            {refreshing
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <RefreshCw className="h-3.5 w-3.5" />}
+            Refresh
+          </button>
+        </div>
+
+        {/* ── KYC banner ── */}
         {!isVerified && !bannerDismissed && (
           <div className="mb-6 flex flex-col gap-3 rounded-xl border border-[#E5E5E2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
@@ -153,7 +369,9 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-[14px] font-semibold text-[#111827]">
-                  {kycStatus === "pending" ? "Your verification is under review" : "Verify your identity to unlock deposits and trading"}
+                  {kycStatus === "pending"
+                    ? "Your verification is under review"
+                    : "Verify your identity to unlock deposits and trading"}
                 </p>
                 <p className="mt-0.5 text-[13px] text-[#6B7280]">
                   {kycStatus === "pending"
@@ -164,7 +382,8 @@ export default function DashboardPage() {
             </div>
             <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
               {kycStatus !== "pending" && (
-                <Link href="/kyc-flow" className="rounded-lg bg-[#111827] px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
+                <Link href="/kyc-flow"
+                  className="rounded-lg bg-[#111827] px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
                   Complete verification
                 </Link>
               )}
@@ -176,44 +395,55 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Portfolio summary + chart */}
+        {/* ── Portfolio summary + chart ── */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Total portfolio value</p>
                 <p className="mt-1.5 text-[34px] font-extrabold tracking-tight text-[#111827]">
-                  ${totals.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${fmt(totals.portfolioValue)}
                 </p>
-                <div className={`mt-2 inline-flex items-center gap-1 text-[13px] font-medium ${totals.dayChangeValue >= 0 ? "text-[#1a6b3c]" : "text-red-600"}`}>
-                  {totals.dayChangeValue >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                  ${Math.abs(totals.dayChangeValue).toFixed(2)} ({totals.dayChangePercent >= 0 ? "+" : ""}{totals.dayChangePercent.toFixed(2)}%) today
+                <div className={`mt-2 inline-flex items-center gap-1 text-[13px] font-medium ${totals.totalGainValue >= 0 ? "text-[#1a6b3c]" : "text-red-600"}`}>
+                  {totals.totalGainValue >= 0
+                    ? <TrendingUp className="h-3.5 w-3.5" />
+                    : <TrendingDown className="h-3.5 w-3.5" />}
+                  {totals.totalGainValue >= 0 ? "+" : "-"}${fmt(Math.abs(totals.totalGainValue))} ({totals.totalGainValue >= 0 ? "+" : ""}{totals.totalGainPercent.toFixed(2)}%) all time
                 </div>
               </div>
-              <div className="flex gap-1 rounded-lg bg-[#F3F4F6] p-1 text-[12px] font-medium text-[#6B7280]">
-                {["1W", "1M", "3M", "1Y", "All"].map((range) => (
-                  <button key={range} type="button"
-                    className={`rounded-md px-2.5 py-1 transition-colors ${range === "1M" ? "bg-white text-[#111827] shadow-sm" : "hover:text-[#111827]"}`}>
-                    {range}
-                  </button>
-                ))}
-              </div>
+              <Link href="/portfolio"
+                className="rounded-lg border border-[#E5E5E2] px-3 py-1.5 text-[12px] font-medium text-[#6B7280] hover:text-[#111827]">
+                Full analysis →
+              </Link>
             </div>
-            <div className="mt-6"><GrowthChart data={growthSeries} /></div>
+            <div className="mt-6">
+              <GrowthChart data={growthSeries} />
+            </div>
           </div>
 
+          {/* Side cards */}
           <div className="flex flex-col gap-5">
+            {/* Available cash */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
               <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Available cash</p>
-              <p className="mt-1.5 text-[24px] font-bold text-[#111827]">
-                ${totals.cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p className="mt-1 text-[12.5px] text-[#9CA3AF]">Ready to invest</p>
+              <p className="mt-1.5 text-[24px] font-bold text-[#111827]">${fmt(cashBalance)}</p>
+              <div className="mt-3 flex gap-2">
+                <Link href="/wallet/deposit"
+                  className="flex-1 rounded-lg bg-[#111827] py-1.5 text-center text-[12px] font-medium text-white hover:opacity-90">
+                  Deposit
+                </Link>
+                <Link href="/wallet/withdraw"
+                  className="flex-1 rounded-lg border border-[#E5E5E2] py-1.5 text-center text-[12px] font-medium text-[#6B7280] hover:text-[#111827]">
+                  Withdraw
+                </Link>
+              </div>
             </div>
+
+            {/* Total gain/loss */}
             <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
               <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Total gain / loss</p>
               <p className={`mt-1.5 text-[24px] font-bold ${totals.totalGainValue >= 0 ? "text-[#1a6b3c]" : "text-red-600"}`}>
-                {totals.totalGainValue >= 0 ? "+" : "-"}${Math.abs(totals.totalGainValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {totals.totalGainValue >= 0 ? "+" : "-"}${fmt(Math.abs(totals.totalGainValue))}
               </p>
               <p className={`mt-1 text-[12.5px] font-medium ${totals.totalGainPercent >= 0 ? "text-[#1a6b3c]" : "text-red-600"}`}>
                 {totals.totalGainPercent >= 0 ? "+" : ""}{totals.totalGainPercent.toFixed(2)}% all time
@@ -222,16 +452,28 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick actions */}
-        <div className="mt-5 flex flex-wrap gap-3">
-          <QuickAction href="/markets" icon={Plus} label="Buy" variant="primary" />
-          <QuickAction href="/portfolio" icon={Minus} label="Sell" />
-          <QuickAction href="/wallet?action=deposit" icon={ArrowDown} label="Deposit" />
-          <QuickAction href="/wallet?action=withdraw" icon={ArrowUp} label="Withdraw" />
+        {/* ── Quick actions ── */}
+        <div className="mt-5 grid grid-cols-3 gap-3 sm:flex sm:flex-wrap">
+          <Link href="/markets"
+            className="group flex items-center justify-center gap-2.5 rounded-xl bg-[#111827] px-6 py-3.5 text-white shadow-sm transition-all hover:bg-[#1f2937] hover:shadow-md active:scale-[0.98]">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 transition-colors group-hover:bg-white/20">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            <span className="text-[14px] font-semibold">Buy</span>
+          </Link>
+          <Link href="/portfolio"
+            className="group flex items-center justify-center gap-2.5 rounded-xl border border-[#E5E5E2] bg-white px-6 py-3.5 text-[#111827] shadow-sm transition-all hover:border-[#D1D5DB] hover:shadow-md active:scale-[0.98]">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F3F4F6] transition-colors group-hover:bg-[#E5E7EB]">
+              <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            <span className="text-[14px] font-semibold">Sell</span>
+          </Link>
         </div>
 
-        {/* Holdings + activity */}
+        {/* ── Holdings + activity ── */}
         <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+
+          {/* Holdings */}
           <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex items-center justify-between">
               <h2 className="text-[16px] font-semibold text-[#111827]">Your holdings</h2>
@@ -239,59 +481,92 @@ export default function DashboardPage() {
                 View all <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="mt-4 divide-y divide-[#F3F4F6]">
-              {holdings.map((h) => {
-                const value = h.shares * h.price;
-                const up = h.changePercent >= 0;
-                return (
-                  <Link key={h.symbol} href={`/markets/${h.symbol.toLowerCase()}`}
-                    className="flex items-center justify-between py-3.5 transition-colors hover:bg-[#F7F7F5] -mx-2 px-2 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-[11px] font-bold text-[#111827]">
-                        {h.symbol}
-                      </span>
-                      <div>
-                        <p className="text-[14px] font-semibold text-[#111827]">{h.symbol}</p>
-                        <p className="text-[12px] text-[#9CA3AF]">{h.shares} shares</p>
+
+            {holdings.length === 0 ? (
+              <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-[14px] font-medium text-[#6B7280]">No holdings yet</p>
+                <p className="mt-1 text-[13px] text-[#9CA3AF]">Start by browsing the markets</p>
+                <Link href="/markets"
+                  className="mt-4 rounded-lg bg-[#111827] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90">
+                  Browse markets
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-[#F3F4F6]">
+                {holdings.slice(0, 5).map((h) => {
+                  const value = h.shares * h.currentPrice;
+                  const up = h.changePercent >= 0;
+                  return (
+                    <Link
+                      key={h.symbol}
+                      href={`/trade/${h.symbol}?name=${encodeURIComponent(h.name)}&type=${h.type}&price=${h.currentPrice}`}
+                      className="-mx-2 flex items-center justify-between rounded-lg px-2 py-3.5 transition-colors hover:bg-[#F7F7F5]">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-[11px] font-bold text-[#111827]">
+                          {h.symbol.slice(0, 2)}
+                        </span>
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#111827]">{h.symbol}</p>
+                          <p className="text-[12px] text-[#9CA3AF]">
+                            {Number(h.shares).toFixed(h.shares % 1 === 0 ? 0 : 4)} shares · ${fmt(h.currentPrice)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[14px] font-bold text-[#111827]">
-                        ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                      <p className={`flex items-center justify-end gap-0.5 text-[12px] font-medium ${up ? "text-[#1a6b3c]" : "text-red-500"}`}>
-                        {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {up ? "+" : ""}{h.changePercent.toFixed(2)}%
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                      <div className="text-right">
+                        <p className="text-[14px] font-bold text-[#111827]">${fmt(value)}</p>
+                        <p className={`flex items-center justify-end gap-0.5 text-[12px] font-medium ${up ? "text-[#1a6b3c]" : "text-red-500"}`}>
+                          {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {up ? "+" : ""}{h.changePercent.toFixed(2)}%
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+                {holdings.length > 5 && (
+                  <div className="pt-3 text-center">
+                    <Link href="/portfolio" className="text-[13px] font-medium text-[#6B7280] hover:text-[#111827]">
+                      +{holdings.length - 5} more positions →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Recent activity */}
           <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-[16px] font-semibold text-[#111827]">Recent activity</h2>
-              <Link href="/wallet" className="flex items-center gap-1 text-[13px] font-medium text-[#6B7280] hover:text-[#111827]">
-                <Wallet className="h-3.5 w-3.5" />
+              <Link href="/wallet" className="text-[13px] font-medium text-[#6B7280] hover:text-[#111827]">
+                View all
               </Link>
             </div>
-            <div className="mt-4 divide-y divide-[#F3F4F6]">
-              {activity.map((a) => (
-                <div key={a.id} className="flex items-center justify-between py-3.5">
-                  <div>
-                    <p className="text-[13.5px] font-medium text-[#111827]">{a.label}</p>
-                    <p className="text-[12px] text-[#9CA3AF]">{a.detail} · {a.date}</p>
+
+            {activity.length === 0 ? (
+              <div className="mt-6 flex flex-col items-center py-8 text-center">
+                <p className="text-[13px] text-[#9CA3AF]">No activity yet</p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-[#F3F4F6]">
+                {activity.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between gap-3 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <ActivityIcon kind={a.kind} />
+                      <div>
+                        <p className="text-[13.5px] font-medium text-[#111827]">{a.label}</p>
+                        <p className="text-[12px] text-[#9CA3AF]">{a.detail} · {a.date}</p>
+                      </div>
+                    </div>
+                    <p className={`shrink-0 text-[13.5px] font-semibold ${a.amount >= 0 ? "text-[#1a6b3c]" : "text-[#111827]"}`}>
+                      {a.amount >= 0 ? "+" : "-"}${fmt(Math.abs(a.amount))}
+                    </p>
                   </div>
-                  <p className={`text-[13.5px] font-semibold ${a.amount >= 0 ? "text-[#1a6b3c]" : "text-[#111827]"}`}>
-                    {a.amount >= 0 ? "+" : "-"}${Math.abs(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
       </main>
     </div>
   );

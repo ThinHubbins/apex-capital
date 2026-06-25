@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAdminId } from "./admin-auth"; // <-- not lib/admin
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -23,13 +24,22 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refreshes the auth token if needed — do not remove this call.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // ---- Admin protection (check first, stricter than general auth) ----
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (!isAdminId(user?.id)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
   // ---- Route protection ----
-  // Anything under these paths requires a signed-in user.
   const protectedPaths = ["/dashboard", "/portfolio", "/wallet", "/profile", "/kyc-flow"];
   const isProtected = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
 

@@ -91,7 +91,6 @@ type PersonalInfo = {
   country: string;
   postalCode: string;
 };
-
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -627,7 +626,7 @@ function PersonalInfoStep({
             type="text"
             value={info.nationality}
             onChange={(e) => onChange("nationality", e.target.value)}
-            placeholder="e.g. Nigerian, American"
+            placeholder="e.g. Mexican, American"
             className={`mt-1.5 ${fieldClass(!!errors.nationality)}`}
           />
           {errors.nationality && (
