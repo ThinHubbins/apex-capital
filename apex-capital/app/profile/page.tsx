@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import { createClient } from "../../lib/supabase/client";
+import Link from "next/link";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -596,17 +597,23 @@ export default function ProfilePage() {
         <div className="mt-4">
           <SectionCard title="Security" description="Keep your account protected.">
             <div className="divide-y divide-[#F3F4F6]">
-              <LinkRow icon={Lock} label="Change password" sublabel="Update your login password" />
-              <LinkRow
-                icon={Smartphone}
-                label="Two-factor authentication"
-                sublabel="Not enabled — adds a second layer of security"
-              />
-              <LinkRow
-                icon={Globe2}
-                label="Active sessions"
-                sublabel="View and revoke signed-in devices"
-              />
+              <Link href="/login/forgot-password">
+              <LinkRow icon={Lock} label="Change password" sublabel="Update your login password" /></Link>
+              <Link href="/two-factor">
+  <LinkRow
+    icon={Smartphone}
+    label="Two-factor authentication"
+    sublabel="Not enabled — adds a second layer of security"
+  />
+</Link>
+              
+<Link href="/sessions">
+  <LinkRow
+    icon={Globe2}
+    label="Active sessions"
+    sublabel="View and revoke signed-in devices"
+  />
+</Link>
             </div>
           </SectionCard>
         </div>

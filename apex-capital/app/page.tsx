@@ -17,6 +17,11 @@ import {
   Landmark,
   Mail,
   ArrowUpRight,
+  KeyRound,
+  Eye,
+  Lock,
+  Check,
+  Loader2,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { AssetLogo } from "../components/Assetslogo";
@@ -155,13 +160,19 @@ const faqs = [
   },
 ];
 
-const productLinks = ["Markets", "Wealth Management", "Security"];
-const companyLinks = ["About Us", "Careers", "Media Kit", "Contact"];
+const productLinks = [
+  { label: "Markets", href: "/markets" },
+  { label: "Security", href: "/security" },
+];
+
+const companyLinks = [
+  { label: "About Us", href: "/about-us" },
+  { label: "Contact",  href: "/contact"  },
+];
+
 const legalLinks = [
-  "Privacy Policy",
-  "Terms of Service",
-  "Security",
-  "Help Center",
+  { label: "Privacy Policy",   href: "/privacy" },
+  { label: "Terms of Service", href: "/terms"   },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -226,7 +237,21 @@ export default function Home() {
   const [showAllNews, setShowAllNews] = useState(false);
 
   const { isLoggedIn } = useAuthUser();
+const [subEmail, setSubEmail] = useState("");
+const [subState, setSubState] = useState<"idle" | "loading" | "success" | "error" | "duplicate">("idle");
 
+async function handleSubscribe() {
+  if (!subEmail || subState === "loading") return;
+  setSubState("loading");
+  const res = await fetch("/api/subscribers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: subEmail }),
+  });
+  if (res.ok) { setSubState("success"); setSubEmail(""); }
+  else if (res.status === 409) setSubState("duplicate");
+  else setSubState("error");
+}
   useEffect(() => {
     let cancelled = false;
     async function fetchQuotes() {
@@ -543,6 +568,8 @@ const rankedQuotes = [...quotes]
           </div>
         </section>
 
+       
+
         {/* -------------------------------------------------------- */}
         {/* Journey timeline                                          */}
         {/* -------------------------------------------------------- */}
@@ -615,6 +642,55 @@ const rankedQuotes = [...quotes]
             </div>
           </div>
         </section>
+
+         {/* ---------------------------------------------------------- */}
+{/* Security teaser */}
+{/* ---------------------------------------------------------- */}
+<section className="px-6 py-20 lg:px-10">
+  <div className="mx-auto max-w-6xl">
+    <div className="overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white p-8 sm:p-10 lg:p-12">
+      <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_auto]">
+        <div>
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#F0F7F2]">
+            <ShieldCheck className="h-5 w-5 text-[#1a6b3c]" strokeWidth={1.75} />
+          </div>
+          <h2 className="mt-4 text-[26px] font-bold tracking-tight text-[#111827] sm:text-[30px]">
+            Security you can verify, not just trust
+          </h2>
+          <p className="mt-2 max-w-md text-[14px] leading-relaxed text-[#6B7280]">
+            256-bit encryption, continuous fraud monitoring, and full KYC/AML
+            compliance protect every account on Apex Capital.
+          </p>
+          <Link
+            href="/security"
+            className="mt-5 inline-flex items-center gap-1 text-[14px] font-medium text-[#111827] hover:opacity-70"
+          >
+            See how we protect you
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="flex gap-3 sm:gap-4">
+          {[
+            { icon: Lock, label: "256-bit\nencryption" },
+            { icon: KeyRound, label: "Multi-factor\nauth" },
+            { icon: Eye, label: "24/7\nmonitoring" },
+          ].map((badge) => (
+            <div
+              key={badge.label}
+              className="flex w-24 flex-col items-center gap-2 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] p-4 text-center sm:w-28"
+            >
+              <badge.icon className="h-5 w-5 text-[#1a6b3c]" strokeWidth={1.75} />
+              <p className="whitespace-pre-line text-[11px] font-medium leading-tight text-[#374151]">
+                {badge.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
         {/* -------------------------------------------------------- */}
         {/* Diversification                                           */}
@@ -834,106 +910,104 @@ const rankedQuotes = [...quotes]
       {/* Footer                                                      */}
       {/* ---------------------------------------------------------- */}
       <footer className="border-t border-[#E5E5E2] bg-white px-6 py-14 lg:px-10">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <p className="text-[17px] font-bold text-[#111827]">
-                Apex Capital
-              </p>
-              <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-[#6B7280]">
-                Architecting clarity for the modern investor. Built on
-                precision, speed, and global access.
-              </p>
-              <div className="mt-4 flex gap-2.5">
-                {[Globe2, Landmark, Mail].map((Icon, i) => (
-                  <span
-                    key={i}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E5E2] bg-[#F7F7F5]"
-                  >
-                    <Icon className="h-3.5 w-3.5 text-[#6B7280]" />
-                  </span>
-                ))}
-              </div>
-            </div>
+  <div className="mx-auto max-w-6xl">
+    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
 
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">
-                PRODUCT
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {productLinks.map((link) => (
-                  <li key={link}>
-                    <Link
-                      href="/"
-                      className="text-[13px] text-[#6B7280] hover:text-[#111827]"
-                    >
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* Brand */}
+      <div>
+        <p className="text-[17px] font-bold text-[#111827]">Apex Capital</p>
+        <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-[#6B7280]">
+          Architecting clarity for the modern investor. Built on precision,
+          speed, and global access.
+        </p>
+      </div>
 
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">
-                COMPANY
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {companyLinks.map((link) => (
-                  <li key={link}>
-                    <Link
-                      href="/"
-                      className="text-[13px] text-[#6B7280] hover:text-[#111827]"
-                    >
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* Product */}
+      <div>
+        <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">PRODUCT</p>
+        <ul className="mt-3 space-y-2.5">
+          {productLinks.map((link) => (
+            <li key={link.label}>
+              <Link href={link.href} className="text-[13px] text-[#6B7280] hover:text-[#111827]">
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">
-                STAY UPDATED
-              </p>
-              <p className="mt-3 text-[13px] leading-relaxed text-[#6B7280]">
-                Weekly market analysis and product updates delivered to your
-                inbox.
-              </p>
-              <div className="mt-4 flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  className="w-full rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3 py-2 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#111827]"
-                />
-                <button
-                  type="button"
-                  className="shrink-0 rounded-lg bg-[#111827] px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-                >
-                  Join
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Company */}
+      <div>
+        <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">COMPANY</p>
+        <ul className="mt-3 space-y-2.5">
+          {companyLinks.map((link) => (
+            <li key={link.label}>
+              <Link href={link.href} className="text-[13px] text-[#6B7280] hover:text-[#111827]">
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          <div className="mt-12 flex flex-col-reverse items-center justify-between gap-4 border-t border-[#F3F4F6] pt-7 sm:flex-row">
-            <p className="text-[12px] text-[#9CA3AF]">
-              © {new Date().getFullYear()} Apex Capital. All rights reserved.
-            </p>
-            <div className="flex flex-wrap justify-center gap-5">
-              {legalLinks.map((link) => (
-                <Link
-                  key={link}
-                  href="/"
-                  className="text-[12px] text-[#9CA3AF] hover:text-[#111827]"
-                >
-                  {link}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Stay Updated — untouched */}
+      <div>
+  <p className="text-[11px] font-semibold tracking-[0.1em] text-[#111827]">STAY UPDATED</p>
+  <p className="mt-3 text-[13px] leading-relaxed text-[#6B7280]">
+    Weekly market analysis and product updates delivered to your inbox.
+  </p>
+
+  {subState === "success" ? (
+    <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-200 bg-[#F0F7F2] px-3 py-2.5 text-[13px] text-[#1a6b3c]">
+      <Check className="h-4 w-4 shrink-0" /> You're subscribed!
+    </div>
+  ) : (
+    <>
+      <div className="mt-4 flex gap-2">
+        <input
+          type="email"
+          value={subEmail}
+          onChange={(e) => { setSubEmail(e.target.value); setSubState("idle"); }}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSubscribe(); }}
+          placeholder="Email address"
+          className="w-full rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3 py-2 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#111827]"
+        />
+        <button
+          type="button"
+          onClick={handleSubscribe}
+          disabled={subState === "loading"}
+          className="shrink-0 rounded-lg bg-[#111827] px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {subState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join"}
+        </button>
+      </div>
+      {subState === "duplicate" && (
+        <p className="mt-1.5 text-[12px] text-amber-600">Already subscribed with that email.</p>
+      )}
+      {subState === "error" && (
+        <p className="mt-1.5 text-[12px] text-red-500">Something went wrong — try again.</p>
+      )}
+    </>
+  )}
+</div>
+
+    </div>
+
+    {/* Bottom bar */}
+    <div className="mt-12 flex flex-col-reverse items-center justify-between gap-4 border-t border-[#F3F4F6] pt-7 sm:flex-row">
+      <p className="text-[12px] text-[#9CA3AF]">
+        © {new Date().getFullYear()} Apex Capital. All rights reserved.
+      </p>
+      <div className="flex flex-wrap justify-center gap-5">
+        {legalLinks.map((link) => (
+          <Link key={link.label} href={link.href} className="text-[12px] text-[#9CA3AF] hover:text-[#111827]">
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  </div>
+</footer>
     </div>
   );
 }

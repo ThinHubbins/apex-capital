@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client"; // adjust if your client lives elsewhere
+import { useAuthUser } from "@/lib/supabase/use-auth-user"; // adjust if your hook lives elsewhere
 
 export default function CreateAccountPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { isLoggedIn, loading: authLoading } = useAuthUser();
 
   const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -17,6 +19,13 @@ export default function CreateAccountPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Already signed in — no need to create another account, send them in.
+  useEffect(() => {
+    if (!authLoading && isLoggedIn) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, isLoggedIn, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,6 +67,16 @@ export default function CreateAccountPage() {
       },
     });
     if (oauthError) setError(oauthError.message);
+  }
+
+  // While we check the session, or once we know they're logged in and are
+  // about to redirect, show a lightweight placeholder instead of the form.
+  if (authLoading || isLoggedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F0F0ED] font-sans">
+        <Loader2 className="h-5 w-5 animate-spin text-[#9CA3AF]" />
+      </div>
+    );
   }
 
   return (

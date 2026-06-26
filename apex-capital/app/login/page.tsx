@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client"; // adjust if your client lives elsewhere
+import { useAuthUser } from "@/lib/supabase/use-auth-user"; // adjust if your hook lives elsewhere
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { isLoggedIn, loading: authLoading } = useAuthUser();
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -16,6 +18,13 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Already signed in — bounce straight to the dashboard, no need to log in again.
+  useEffect(() => {
+    if (!authLoading && isLoggedIn) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, isLoggedIn, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +55,16 @@ export default function LoginPage() {
       },
     });
     if (oauthError) setError(oauthError.message);
+  }
+
+  // While we check the session, or once we know they're logged in and are
+  // about to redirect, show a lightweight placeholder instead of the form.
+  if (authLoading || isLoggedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F0F0ED] font-sans">
+        <Loader2 className="h-5 w-5 animate-spin text-[#9CA3AF]" />
+      </div>
+    );
   }
 
   return (
