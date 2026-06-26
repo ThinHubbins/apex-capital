@@ -5,26 +5,47 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Wallet, ArrowDown, Clock, Check, X, AlertCircle, Loader2,
-  RefreshCw, ShieldCheck, ArrowLeft, Mail, MailOpen,
+  RefreshCw, ShieldCheck, ArrowLeft, Mail, MailOpen, Copy,
+  Bitcoin, Landmark, CheckCircle2,
 } from "lucide-react";
 import Navbar from "../../../components/Navbar";
 import { createClient } from "../../../lib/supabase/client";
 
 type DepositStatus = "pending" | "approved" | "rejected";
+type DepositMethod = "crypto" | "wire";
 
 type Deposit = {
   id: string;
   amount: number;
   status: DepositStatus;
+  method?: DepositMethod;
   rejection_reason: string | null;
   submitted_at: string;
   reviewed_at: string | null;
+};
+
+type CryptoOption = {
+  asset: string;
+  network: string;
+  address: string;
 };
 
 const MIN_DEPOSIT = 10;
 const SLIDER_MAX = 10000;
 const QUICK_AMOUNTS = [100, 500, 1000, 5000];
 const POLL_INTERVAL_MS = 30000;
+
+const CRYPTO_OPTIONS: CryptoOption[] = [
+  { asset: "BTC", network: "BTC NETWORK", address: "bc1qzd67jzq0n7sm82jt0nyxh4egwyg0dtzvvdkuee" },
+  { asset: "USDT", network: "ERC20", address: "0x31D91d829A98e886809f382BD5E77446a17a458E" },
+  { asset: "ETH", network: "ETH", address: "0x31d91d829a98e886809f382bd5e77446a17a458e" },
+  { asset: "SOL", network: "SOLANA", address: "3N4dgunmJhwFd58DUS2ea2J9Aj4Z14EBSBUWUya2KcPz" },
+  { asset: "USDC", network: "ERC20", address: "0x31d91d829a98e886809f382bd5e77446a17a458e" },
+];
+
+function cryptoKey(c: CryptoOption) {
+  return `${c.asset}-${c.network}`;
+}
 
 function formatCurrency(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -50,16 +71,15 @@ function StatusBadge({ status }: { status: DepositStatus }) {
   );
 }
 
-// ─── Email Instructions Modal ─────────────────────────────────────────────────
+// ─── Wire Transfer Submitted Modal (the original modal) ──────────────────────
 
-function DepositSubmittedModal({
+function WireSubmittedModal({
   amount,
   onClose,
 }: {
   amount: number;
   onClose: () => void;
 }) {
-  // Close on Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -74,11 +94,9 @@ function DepositSubmittedModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-2xl">
-        {/* Top accent strip */}
         <div className="h-1.5 w-full bg-[#111827]" />
 
         <div className="px-7 pb-7 pt-6">
-          {/* Icon + heading */}
           <div className="mb-5 flex flex-col items-center text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F2]">
               <MailOpen className="h-7 w-7 text-[#1a6b3c]" />
@@ -93,7 +111,6 @@ function DepositSubmittedModal({
             </p>
           </div>
 
-          {/* Steps */}
           <div className="mb-6 space-y-3 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-5 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
               What happens next
@@ -127,7 +144,6 @@ function DepositSubmittedModal({
             </div>
           </div>
 
-          {/* Patience note */}
           <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <p className="text-[12.5px] leading-relaxed text-amber-800">
@@ -135,7 +151,6 @@ function DepositSubmittedModal({
             </p>
           </div>
 
-          {/* Spam note */}
           <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-[#E5E5E2] bg-white px-4 py-3">
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#9CA3AF]" />
             <p className="text-[12px] leading-relaxed text-[#6B7280]">
@@ -143,7 +158,6 @@ function DepositSubmittedModal({
             </p>
           </div>
 
-          {/* CTA */}
           <button
             type="button"
             onClick={onClose}
@@ -157,19 +171,242 @@ function DepositSubmittedModal({
   );
 }
 
+// ─── Crypto Submitted Modal (new) ─────────────────────────────────────────────
+
+function CryptoSubmittedModal({
+  amount,
+  crypto,
+  onClose,
+}: {
+  amount: number;
+  crypto: CryptoOption;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-2xl">
+        <div className="h-1.5 w-full bg-[#111827]" />
+
+        <div className="px-7 pb-7 pt-6">
+          <div className="mb-5 flex flex-col items-center text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F2]">
+              <Bitcoin className="h-7 w-7 text-[#1a6b3c]" />
+            </div>
+            <h2 className="text-[20px] font-extrabold tracking-tight text-[#111827]">
+              Request submitted
+            </h2>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#6B7280]">
+              Your deposit request of{" "}
+              <span className="font-semibold text-[#111827]">${formatCurrency(amount)}</span>{" "}
+              via {crypto.asset} is pending review.
+            </p>
+          </div>
+
+          <div className="mb-6 space-y-3 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-5 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
+              What happens next
+            </p>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
+                1
+              </div>
+              <p className="text-[13px] text-[#374151]">
+                Send your funds to the {crypto.asset} ({crypto.network}) address you were shown, if you haven't already.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
+                2
+              </div>
+              <p className="text-[13px] text-[#374151]">
+                Our team confirms the transaction on the blockchain.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
+                3
+              </div>
+              <p className="text-[13px] text-[#374151]">
+                Once confirmed, your balance will be updated and you'll be notified here.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-[12.5px] leading-relaxed text-amber-800">
+              <span className="font-semibold">Network confirmations can take time</span> — larger or congested networks may take longer to confirm. If your balance hasn't updated after a while, contact support.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#111827] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <Check className="h-4 w-4" /> Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Method Toggle ────────────────────────────────────────────────────────────
+
+function MethodToggle({
+  method,
+  onChange,
+}: {
+  method: DepositMethod;
+  onChange: (m: DepositMethod) => void;
+}) {
+  const options: { key: DepositMethod; icon: React.ElementType; label: string; description: string }[] = [
+    { key: "crypto", icon: Bitcoin, label: "Crypto", description: "BTC, ETH, USDT, USDC, SOL" },
+    { key: "wire", icon: Landmark, label: "Wire transfer", description: "Bank transfer" },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {options.map(({ key, icon: Icon, label, description }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+            method === key
+              ? "border-[#111827] bg-[#111827] text-white"
+              : "border-[#E5E5E2] bg-white text-[#6B7280] hover:border-[#111827] hover:text-[#111827]"
+          }`}
+        >
+          <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${method === key ? "text-white" : ""}`} />
+          <div>
+            <p className={`text-[13px] font-semibold ${method === key ? "text-white" : "text-[#111827]"}`}>{label}</p>
+            <p className={`mt-0.5 text-[12px] ${method === key ? "text-white/60" : "text-[#9CA3AF]"}`}>{description}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Crypto Address Picker ────────────────────────────────────────────────────
+
+function CryptoAddressPicker({
+  selected,
+  onSelect,
+}: {
+  selected: CryptoOption | null;
+  onSelect: (c: CryptoOption) => void;
+}) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  async function handleCopy(c: CryptoOption) {
+    try {
+      await navigator.clipboard.writeText(c.address);
+      setCopiedKey(cryptoKey(c));
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch {
+      // clipboard may be unavailable — silently ignore
+    }
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {CRYPTO_OPTIONS.map((c) => {
+        const isSelected = selected ? cryptoKey(selected) === cryptoKey(c) : false;
+        return (
+          <div
+            key={cryptoKey(c)}
+            onClick={() => onSelect(c)}
+            className={`cursor-pointer rounded-xl border px-4 py-3.5 transition-colors ${
+              isSelected ? "border-[#111827] bg-[#F7F7F5]" : "border-[#E5E5E2] bg-white hover:border-[#9CA3AF]"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-semibold text-[#111827]">
+                  {c.asset}{" "}
+                  <span className="font-normal text-[#9CA3AF]">({c.network})</span>
+                </p>
+              </div>
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                  isSelected ? "border-[#111827] bg-[#111827]" : "border-[#D1D5DB]"
+                }`}
+              >
+                {isSelected && <CheckCircle2 className="h-5 w-5 text-[#111827]" fill="white" />}
+              </div>
+            </div>
+
+            {isSelected && (
+              <div
+                className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[#E5E5E2] bg-white px-3 py-2.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="truncate text-[12px] font-mono text-[#374151]">{c.address}</p>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(c)}
+                  className="flex shrink-0 items-center gap-1 rounded-md border border-[#E5E5E2] px-2 py-1 text-[11px] font-medium text-[#6B7280] hover:border-[#111827] hover:text-[#111827]"
+                >
+                  {copiedKey === cryptoKey(c) ? (
+                    <>
+                      <Check className="h-3 w-3 text-[#1a6b3c]" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" /> Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DepositPage() {
   const supabase = createClient();
   const [cashBalance, setCashBalance] = useState<number | null>(null);
 
+  const [method, setMethod] = useState<DepositMethod>("crypto");
+
   const [amount, setAmount] = useState<number>(100);
   const [amountInput, setAmountInput] = useState("100");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Modal state — stores the submitted amount so it can be shown inside the modal
-  const [modalAmount, setModalAmount] = useState<number | null>(null);
+  // Crypto-specific state
+  const [selectedCrypto, setSelectedCrypto] = useState<CryptoOption | null>(null);
+
+  // Wire-specific state
+  const [senderBankName, setSenderBankName] = useState("");
+  const [senderAccountNumber, setSenderAccountNumber] = useState("");
+  const [senderBranch, setSenderBranch] = useState("");
+
+  // Modal state
+  const [wireModalAmount, setWireModalAmount] = useState<number | null>(null);
+  const [cryptoModalState, setCryptoModalState] = useState<{ amount: number; crypto: CryptoOption } | null>(null);
 
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loadingDeposits, setLoadingDeposits] = useState(true);
@@ -248,6 +485,14 @@ export default function DepositPage() {
     [deposits]
   );
 
+  function resetForm() {
+    syncAmount(100);
+    setSelectedCrypto(null);
+    setSenderBankName("");
+    setSenderAccountNumber("");
+    setSenderBranch("");
+  }
+
   async function handleSubmit() {
     setFormError(null);
 
@@ -257,21 +502,45 @@ export default function DepositPage() {
       return;
     }
 
+    if (method === "crypto" && !selectedCrypto) {
+      setFormError("Select a crypto asset and address to deposit to.");
+      return;
+    }
+
+    if (method === "wire") {
+      if (!senderBankName.trim() || !senderAccountNumber.trim() || !senderBranch.trim()) {
+        setFormError("Fill in your sender bank name, account number, and branch.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
+      const payload: Record<string, unknown> = { amount: value, method };
+      if (method === "crypto" && selectedCrypto) {
+        payload.cryptoAsset = cryptoKey(selectedCrypto);
+      } else if (method === "wire") {
+        payload.senderBankName = senderBankName.trim();
+        payload.senderAccountNumber = senderAccountNumber.trim();
+        payload.senderBranch = senderBranch.trim();
+      }
+
       const res = await fetch("/api/deposits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: value }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to submit deposit");
 
       setDeposits((prev) => [data.deposit, ...prev]);
 
-      // Show modal with the submitted amount, then reset the form
-      setModalAmount(value);
-      syncAmount(100);
+      if (method === "wire") {
+        setWireModalAmount(value);
+      } else if (selectedCrypto) {
+        setCryptoModalState({ amount: value, crypto: selectedCrypto });
+      }
+      resetForm();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Something went wrong. Try again.");
     } finally {
@@ -283,11 +552,18 @@ export default function DepositPage() {
 
   return (
     <>
-      {/* Modal — rendered above everything else */}
-      {modalAmount !== null && (
-        <DepositSubmittedModal
-          amount={modalAmount}
-          onClose={() => setModalAmount(null)}
+      {/* Modals — rendered above everything else */}
+      {wireModalAmount !== null && (
+        <WireSubmittedModal
+          amount={wireModalAmount}
+          onClose={() => setWireModalAmount(null)}
+        />
+      )}
+      {cryptoModalState !== null && (
+        <CryptoSubmittedModal
+          amount={cryptoModalState.amount}
+          crypto={cryptoModalState.crypto}
+          onClose={() => setCryptoModalState(null)}
         />
       )}
 
@@ -318,9 +594,17 @@ export default function DepositPage() {
             </div>
           )}
 
+          {/* Method selection */}
+          <div className="mb-5">
+            <p className="mb-2.5 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Deposit method</p>
+            <MethodToggle method={method} onChange={setMethod} />
+          </div>
+
           {/* Amount selection */}
           <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
-            <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Amount to deposit</p>
+            <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+              {method === "crypto" ? "USD value you sent" : "Amount to deposit"}
+            </p>
 
             <div className="mt-3 flex items-center gap-2">
               <span className="text-[28px] font-bold text-[#9CA3AF]">$</span>
@@ -366,6 +650,63 @@ export default function DepositPage() {
                 </button>
               ))}
             </div>
+
+            {/* Crypto-specific section */}
+            {method === "crypto" && (
+              <div className="mt-6 border-t border-[#F3F4F6] pt-5">
+                <p className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+                  Select a deposit address
+                </p>
+                <CryptoAddressPicker selected={selectedCrypto} onSelect={setSelectedCrypto} />
+                {selectedCrypto && (
+                  <p className="mt-3 flex items-start gap-1.5 text-[12px] text-amber-700">
+                    <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                    Only send {selectedCrypto.asset} on the {selectedCrypto.network} network to this address. Sending any other asset or using the wrong network may result in permanent loss of funds.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Wire-specific section */}
+            {method === "wire" && (
+              <div className="mt-6 border-t border-[#F3F4F6] pt-5">
+                <p className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+                  Sender bank information
+                </p>
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-medium text-[#6B7280]">Sender bank name</label>
+                    <input
+                      type="text"
+                      value={senderBankName}
+                      onChange={(e) => setSenderBankName(e.target.value)}
+                      placeholder="e.g. Chase Bank"
+                      className="w-full rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3.5 py-2.5 text-[13px] text-[#111827] outline-none focus:border-[#111827] focus:bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-medium text-[#6B7280]">Sender account number</label>
+                    <input
+                      type="text"
+                      value={senderAccountNumber}
+                      onChange={(e) => setSenderAccountNumber(e.target.value)}
+                      placeholder="Account number"
+                      className="w-full rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3.5 py-2.5 text-[13px] text-[#111827] outline-none focus:border-[#111827] focus:bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-medium text-[#6B7280]">Branch name / code</label>
+                    <input
+                      type="text"
+                      value={senderBranch}
+                      onChange={(e) => setSenderBranch(e.target.value)}
+                      placeholder="Branch name or code"
+                      className="w-full rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3.5 py-2.5 text-[13px] text-[#111827] outline-none focus:border-[#111827] focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {formError && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
@@ -425,6 +766,7 @@ export default function DepositPage() {
                         <p className="text-[14px] font-semibold text-[#111827]">${formatCurrency(Number(d.amount))}</p>
                         <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
                           Submitted {new Date(d.submitted_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
+                          {d.method && <span className="capitalize"> · {d.method}</span>}
                         </p>
                         {d.status === "rejected" && d.rejection_reason && (
                           <p className="mt-1.5 flex items-start gap-1.5 text-[12px] text-red-600">

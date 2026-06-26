@@ -2,6 +2,7 @@
 
 import { AssetLogo } from "../../../components/Assetslogo";
 import { useEffect, useState, useCallback } from "react";
+import { useAdminNotifications, type AdminNotifSection } from "../../../lib/useAdminNotifications";
 import {
   ShieldCheck, ShieldAlert, Clock, Eye, Check, X,
   Loader2, ChevronDown, ChevronUp, User, FileText,
@@ -16,6 +17,10 @@ type KycStatus = "pending" | "verified" | "rejected";
 type DepositStatus = "pending" | "approved" | "rejected";
 type WithdrawalStatus = "pending" | "approved" | "rejected";
 type AdminSection = "kyc" | "deposits" | "withdrawals" | "messages" | "prices";
+
+function isNotifSection(s: AdminSection): s is AdminNotifSection {
+  return s === "kyc" || s === "deposits" || s === "withdrawals";
+}
 
 type Submission = {
   id: string;
@@ -47,11 +52,17 @@ type Deposit = {
   email: string | null;
   amount: number;
   status: DepositStatus;
+  method?: "crypto" | "wire";
+  crypto_asset?: string | null;
+  crypto_network?: string | null;
+  crypto_address?: string | null;
+  sender_bank_name?: string | null;
+  sender_account_number?: string | null;
+  sender_branch?: string | null;
   rejection_reason: string | null;
   submitted_at: string;
   reviewed_at: string | null;
 };
-
 type Withdrawal = {
   id: string;
   user_id: string;
@@ -59,6 +70,14 @@ type Withdrawal = {
   email: string | null;
   amount: number;
   status: WithdrawalStatus;
+  method?: "crypto" | "bank";
+  crypto_asset?: string | null;
+  crypto_network?: string | null;
+  crypto_user_address?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_holder_name?: string | null;
+  bank_branch_or_swift?: string | null;
   rejection_reason: string | null;
   submitted_at: string;
   reviewed_at: string | null;
@@ -177,6 +196,17 @@ function SelfieBox({ url }: { url: string | null }) {
         <Check className="h-4 w-4" /> Liveness check completed
       </p>
     </div>
+  );
+}
+
+// ─── Notification Badge ───────────────────────────────────────────────────────
+
+function NotifBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+      {count > 9 ? "9+" : count}
+    </span>
   );
 }
 
@@ -514,7 +544,7 @@ function SubmissionRow({
 
 // ─── KYC Section ─────────────────────────────────────────────────────────────
 
-function KycSection({ showToast }: { showToast: (msg: string) => void }) {
+function KycSection({ showToast, liveSignal }: { showToast: (msg: string) => void; liveSignal?: number }) {
   const [tab, setTab] = useState<KycStatus>("pending");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -554,6 +584,15 @@ function KycSection({ showToast }: { showToast: (msg: string) => void }) {
 
   useEffect(() => { fetchCounts(); }, []);
   useEffect(() => { fetchSubmissions(tab); }, [tab]);
+
+  // Live signal from Supabase Realtime: refetch silently when a new row arrives
+  useEffect(() => {
+    if (liveSignal) {
+      fetchSubmissions(tab, { silent: true });
+      fetchCounts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveSignal]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -670,6 +709,40 @@ function DepositRow({
         </div>
       </div>
 
+      {dep.method && (
+        <div className="mx-4 sm:mx-5 mb-4 rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3.5 py-3 text-[13px]">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
+            {dep.method === "crypto" ? "Crypto deposit details" : "Sender bank details"}
+          </p>
+          {dep.method === "crypto" ? (
+            <div className="space-y-1">
+              <p className="text-[#374151]">
+                <span className="font-medium text-[#111827]">{dep.crypto_asset}</span>
+                {dep.crypto_network && <span className="text-[#9CA3AF]"> ({dep.crypto_network})</span>}
+              </p>
+              {dep.crypto_address && (
+                <p className="break-all font-mono text-[12px] text-[#6B7280]">{dep.crypto_address}</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Bank name</p>
+                <p className="text-[#111827]">{dep.sender_bank_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Account number</p>
+                <p className="text-[#111827]">{dep.sender_account_number || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Branch</p>
+                <p className="text-[#111827]">{dep.sender_branch || "—"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {dep.status === "rejected" && dep.rejection_reason && (
         <div className="mx-4 sm:mx-5 mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -707,7 +780,7 @@ function DepositRow({
 
 // ─── Deposits Section ─────────────────────────────────────────────────────────
 
-function DepositsSection({ showToast }: { showToast: (msg: string) => void }) {
+function DepositsSection({ showToast, liveSignal }: { showToast: (msg: string) => void; liveSignal?: number }) {
   const [tab, setTab] = useState<DepositStatus>("pending");
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -746,6 +819,15 @@ function DepositsSection({ showToast }: { showToast: (msg: string) => void }) {
 
   useEffect(() => { fetchCounts(); }, []);
   useEffect(() => { fetchDeposits(tab); }, [tab]);
+
+  // Live signal from Supabase Realtime: refetch silently when a new row arrives
+  useEffect(() => {
+    if (liveSignal) {
+      fetchDeposits(tab, { silent: true });
+      fetchCounts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveSignal]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -850,6 +932,43 @@ function WithdrawalRow({
           <DepositStatusBadge status={w.status} />
         </div>
       </div>
+      {w.method && (
+        <div className="mx-4 sm:mx-5 mb-4 rounded-lg border border-[#E5E5E2] bg-[#F7F7F5] px-3.5 py-3 text-[13px]">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
+            {w.method === "crypto" ? "Payout wallet details" : "Payout bank details"}
+          </p>
+          {w.method === "crypto" ? (
+            <div className="space-y-1">
+              <p className="text-[#374151]">
+                <span className="font-medium text-[#111827]">{w.crypto_asset}</span>
+                {w.crypto_network && <span className="text-[#9CA3AF]"> ({w.crypto_network})</span>}
+              </p>
+              {w.crypto_user_address && (
+                <p className="break-all font-mono text-[12px] text-[#6B7280]">{w.crypto_user_address}</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Bank name</p>
+                <p className="text-[#111827]">{w.bank_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Account holder</p>
+                <p className="text-[#111827]">{w.account_holder_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Account number</p>
+                <p className="text-[#111827]">{w.account_number || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#9CA3AF]">Branch/SWIFT</p>
+                <p className="text-[#111827]">{w.bank_branch_or_swift || "—"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {w.status === "rejected" && w.rejection_reason && (
         <div className="mx-4 sm:mx-5 mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
@@ -886,7 +1005,7 @@ function WithdrawalRow({
   );
 }
 
-function WithdrawalsSection({ showToast }: { showToast: (msg: string) => void }) {
+function WithdrawalsSection({ showToast, liveSignal }: { showToast: (msg: string) => void; liveSignal?: number }) {
   const [tab, setTab] = useState<WithdrawalStatus>("pending");
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -925,6 +1044,15 @@ function WithdrawalsSection({ showToast }: { showToast: (msg: string) => void })
 
   useEffect(() => { fetchCounts(); }, []);
   useEffect(() => { fetchWithdrawals(tab); }, [tab]);
+
+  // Live signal from Supabase Realtime: refetch silently when a new row arrives
+  useEffect(() => {
+    if (liveSignal) {
+      fetchWithdrawals(tab, { silent: true });
+      fetchCounts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveSignal]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -1557,13 +1685,38 @@ function PricesSection({ showToast }: { showToast: (msg: string) => void }) {
 
 export default function AdminPage() {
   const [section, setSection] = useState<AdminSection>("kyc");
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; section?: AdminSection } | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [refreshSignal, setRefreshSignal] = useState<Record<AdminNotifSection, number>>({
+    kyc: 0,
+    deposits: 0,
+    withdrawals: 0,
+  });
 
-  function showToast(msg: string) {
-    setToast(msg);
+  function showToast(msg: string, sec?: AdminSection) {
+    setToast({ message: msg, section: sec });
     setTimeout(() => setToast(null), 3500);
   }
+
+  // Live Supabase Realtime subscriptions: bumps unread badges + fires a toast
+  // whenever a new KYC/deposit/withdrawal request comes in, without polling.
+  const { unreadCounts, markSeen } = useAdminNotifications(
+    isNotifSection(section) ? section : null,
+    (sec, label) => {
+      showToast(`New ${label} received`, sec);
+      setRefreshSignal((prev) => ({ ...prev, [sec]: prev[sec] + 1 }));
+    }
+  );
+
+  // Mark the active section as "seen" (clears its badge) whenever it's opened
+  useEffect(() => {
+    if (isNotifSection(section)) markSeen(section);
+  }, [section, markSeen]);
+
+  function getUnread(key: AdminSection): number {
+    return isNotifSection(key) ? unreadCounts[key] : 0;
+  }
+  const totalUnread = unreadCounts.kyc + unreadCounts.deposits + unreadCounts.withdrawals;
 
   const nav: { key: AdminSection; icon: React.ElementType; label: string }[] = [
     { key: "kyc",         icon: ShieldCheck,  label: "KYC Review"  },
@@ -1596,11 +1749,12 @@ export default function AdminPage() {
                 key={key}
                 type="button"
                 onClick={() => setSection(key)}
-                className={"flex items-center gap-2 rounded-lg px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium transition-colors " +
+                className={"relative flex items-center gap-2 rounded-lg px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium transition-colors " +
                   (section === key ? "bg-white text-[#111827] shadow-sm" : "text-[#6B7280] hover:text-[#111827]")}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="hidden lg:inline">{label}</span>
+                <NotifBadge count={getUnread(key)} />
               </button>
             ))}
           </nav>
@@ -1609,10 +1763,11 @@ export default function AdminPage() {
           <button
             type="button"
             onClick={() => setMobileNavOpen((v) => !v)}
-            className="md:hidden flex items-center gap-2 rounded-lg border border-[#E5E5E2] bg-white px-3 py-2 text-[13px] font-medium text-[#111827]"
+            className="relative md:hidden flex items-center gap-2 rounded-lg border border-[#E5E5E2] bg-white px-3 py-2 text-[13px] font-medium text-[#111827]"
           >
             <Menu className="h-4 w-4" />
             <span>{activeLabel}</span>
+            <NotifBadge count={totalUnread} />
           </button>
         </div>
 
@@ -1625,11 +1780,12 @@ export default function AdminPage() {
                   key={key}
                   type="button"
                   onClick={() => { setSection(key); setMobileNavOpen(false); }}
-                  className={"flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors " +
+                  className={"relative flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors " +
                     (section === key ? "bg-[#111827] text-white" : "bg-[#F7F7F5] text-[#6B7280] hover:text-[#111827]")}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   {label}
+                  <NotifBadge count={getUnread(key)} />
                 </button>
               ))}
             </div>
@@ -1638,19 +1794,24 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 lg:px-10">
-        {section === "kyc"         && <KycSection         showToast={showToast} />}
-        {section === "deposits"    && <DepositsSection    showToast={showToast} />}
-        {section === "withdrawals" && <WithdrawalsSection showToast={showToast} />}
+        {section === "kyc"         && <KycSection         showToast={showToast} liveSignal={refreshSignal.kyc} />}
+        {section === "deposits"    && <DepositsSection    showToast={showToast} liveSignal={refreshSignal.deposits} />}
+        {section === "withdrawals" && <WithdrawalsSection showToast={showToast} liveSignal={refreshSignal.withdrawals} />}
         {section === "messages"    && <MessagesSection    showToast={showToast} />}
         {section === "prices"      && <PricesSection      showToast={showToast} />}
       </main>
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 rounded-xl border border-[#E5E5E2] bg-white px-4 py-3 text-[13px] font-medium text-[#111827] shadow-lg max-w-[calc(100vw-2rem)]">
+        <button
+          type="button"
+          onClick={() => { if (toast.section) setSection(toast.section); setToast(null); }}
+          className={"fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 rounded-xl border border-[#E5E5E2] bg-white px-4 py-3 text-[13px] font-medium text-[#111827] shadow-lg max-w-[calc(100vw-2rem)] text-left " +
+            (toast.section ? "cursor-pointer hover:shadow-xl transition-shadow" : "cursor-default")}
+        >
           <Check className="h-4 w-4 text-[#1a6b3c] shrink-0" />
-          <span className="truncate">{toast}</span>
-        </div>
+          <span className="truncate">{toast.message}</span>
+        </button>
       )}
     </div>
   );

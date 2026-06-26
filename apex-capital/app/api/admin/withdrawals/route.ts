@@ -81,18 +81,16 @@ export async function PATCH(req: NextRequest) {
   });
 
   if (action === "approve") {
-    const { error: debitError } = await admin.rpc("debit_cash_balance", {
-      p_user_id: userId,
-      p_amount: withdrawal.amount,
-    });
-    if (debitError) {
-      return NextResponse.json({ error: debitError.message ?? "Failed to debit balance" }, { status: 500 });
-    }
-
-    await admin
+    // Funds were already reserved (debited) when the user submitted the request.
+    // Approval here just confirms the external transfer/payout happened — no balance change.
+    const { error: updateError } = await admin
       .from("withdrawals")
       .update({ status: "approved", reviewed_at: new Date().toISOString(), rejection_reason: null })
       .eq("id", withdrawalId);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message ?? "Failed to update withdrawal" }, { status: 500 });
+    }
 
     await createNotification({
       userId,
@@ -102,16 +100,32 @@ export async function PATCH(req: NextRequest) {
       link: "/wallet",
     });
   } else {
-    await admin
+    const reason = rejectionReason.trim();
+
+    // Refund the reserved amount back to the user's cash balance.
+    const { error: refundError } = await admin.rpc("refund_withdrawal", {
+      p_user_id: userId,
+      p_amount: withdrawal.amount,
+    });
+    if (refundError) {
+      console.error("refund_withdrawal RPC failed:", refundError);
+      return NextResponse.json({ error: refundError.message ?? "Failed to refund balance" }, { status: 500 });
+    }
+
+    const { error: updateError } = await admin
       .from("withdrawals")
-      .update({ status: "rejected", reviewed_at: new Date().toISOString(), rejection_reason: rejectionReason.trim() })
+      .update({ status: "rejected", reviewed_at: new Date().toISOString(), rejection_reason: reason })
       .eq("id", withdrawalId);
+
+    if (updateError) {
+      return NextResponse.json({ error: "Failed to update withdrawal" }, { status: 500 });
+    }
 
     await createNotification({
       userId,
       type: "general",
       title: "Withdrawal rejected",
-      message: `Your withdrawal of $${formattedAmount} was rejected. Reason: ${rejectionReason.trim()}`,
+      message: `Your withdrawal of $${formattedAmount} was rejected and the funds have been returned to your available cash. Reason: ${reason}`,
       link: "/wallet/withdraw",
     });
   }
