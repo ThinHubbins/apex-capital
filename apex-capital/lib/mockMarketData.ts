@@ -71,25 +71,55 @@ const DEFAULT_REVERSION: Record<AssetType, number> = {
 // domain's favicon via Google's public favicon service — no API key,
 // no signup, works directly in an <img src>.
 const TICKER_DOMAIN: Record<string, string> = {
-  AAPL: "apple.com",
-  MSFT: "microsoft.com",
+  AAPL:  "apple.com",
+  MSFT:  "microsoft.com",
   GOOGL: "google.com",
-  AMZN: "amazon.com",
-  TSLA: "tesla.com",
-  NVDA: "nvidia.com",
-  META: "meta.com",
-  NFLX: "netflix.com",
-  DIS: "disney.com",
-  V: "visa.com",
-  JPM: "jpmorganchase.com",
-  KO: "coca-cola.com",
-  SPY: "ssga.com",
-  QQQ: "invesco.com",
-  VTI: "vanguard.com",
-  VXUS: "vanguard.com",
-  VEA: "vanguard.com",
-  EEM: "ishares.com",
-  GLD: "ssga.com",
+  AMZN:  "amazon.com",
+  TSLA:  "tesla.com",
+  NVDA:  "nvidia.com",
+  META:  "meta.com",
+  NFLX:  "netflix.com",
+  DIS:   "disney.com",
+  V:     "visa.com",
+  JPM:   "jpmorganchase.com",
+  KO:    "coca-cola.com",
+  SPY:   "ssga.com",
+  QQQ:   "invesco.com",
+  VTI:   "vanguard.com",
+  VXUS:  "vanguard.com",
+  VEA:   "vanguard.com",
+  EEM:   "ishares.com",
+  GLD:   "ssga.com",
+  // SpaceX + international tech
+  SPCE:  "spacex.com",
+  SMSN:  "samsung.com",
+  LGCL:  "lg.com",
+  SONY:  "sony.com",
+  TM:    "toyota.com",
+  NSANY: "nissan.com",
+  BABA:  "alibaba.com",
+  TSM:   "tsmc.com",
+  SAP:   "sap.com",
+  ASML:  "asml.com",
+  // Social media
+  SNAP:  "snap.com",
+  PINS:  "pinterest.com",
+  TWTR:  "x.com",
+  RDDT:  "reddit.com",
+  TTDV:  "tiktok.com",
+  YT:    "youtube.com",
+  // Vehicle companies
+  F:     "ford.com",
+  GM:    "gm.com",
+  STLA:  "stellantis.com",
+  RIVN:  "rivian.com",
+  LCID:  "lucidmotors.com",
+  NIO:   "nio.com",
+  BMWYY: "bmw.com",
+  MBGYY: "mercedes-benz.com",
+  VWAGY: "vw.com",
+  HMC:   "honda.com",
+  HYMTF: "hyundai.com",
 };
 
 function stockLogo(ticker: string): string {
@@ -106,6 +136,7 @@ function cryptoLogo(symbol: string): string {
 // ─── Asset universe ────────────────────────────────────────────────
 
 export const MOCK_STOCKS: MockAsset[] = [
+  // ── Original stocks ──
   { symbol: "AAPL",  name: "Apple Inc.",                  assetType: "stock", floor: 195, ceiling: 230, startPrice: 212, logo: stockLogo("AAPL")  },
   { symbol: "MSFT",  name: "Microsoft Corporation",       assetType: "stock", floor: 380, ceiling: 430, startPrice: 405, logo: stockLogo("MSFT")  },
   { symbol: "GOOGL", name: "Alphabet Inc.",               assetType: "stock", floor: 150, ceiling: 185, startPrice: 168, logo: stockLogo("GOOGL") },
@@ -118,6 +149,41 @@ export const MOCK_STOCKS: MockAsset[] = [
   { symbol: "V",     name: "Visa Inc.",                   assetType: "stock", floor: 260, ceiling: 300, startPrice: 280, logo: stockLogo("V")     },
   { symbol: "JPM",   name: "JPMorgan Chase & Co.",        assetType: "stock", floor: 190, ceiling: 230, startPrice: 210, logo: stockLogo("JPM")   },
   { symbol: "KO",    name: "The Coca-Cola Company",       assetType: "stock", floor: 60,  ceiling: 70,  startPrice: 65,  logo: stockLogo("KO")    },
+
+  // ── SpaceX ──
+  { symbol: "SPCE",  name: "SpaceX",                      assetType: "stock", floor: 160, ceiling: 220, startPrice: 185, logo: stockLogo("SPCE")  },
+
+  // ── International & major tech ──
+  { symbol: "SMSN",  name: "Samsung Electronics Co.",     assetType: "stock", floor: 52,  ceiling: 72,  startPrice: 62,  logo: stockLogo("SMSN")  },
+  { symbol: "LGCL",  name: "LG Electronics Inc.",         assetType: "stock", floor: 68,  ceiling: 95,  startPrice: 80,  logo: stockLogo("LGCL")  },
+  { symbol: "SONY",  name: "Sony Group Corporation",      assetType: "stock", floor: 78,  ceiling: 105, startPrice: 90,  logo: stockLogo("SONY")  },
+  { symbol: "TM",    name: "Toyota Motor Corporation",    assetType: "stock", floor: 175, ceiling: 215, startPrice: 195, logo: stockLogo("TM")    },
+  { symbol: "NSANY", name: "Nissan Motor Co., Ltd.",      assetType: "stock", floor: 6,   ceiling: 11,  startPrice: 8,   logo: stockLogo("NSANY") },
+  { symbol: "BABA",  name: "Alibaba Group Holding Ltd.",  assetType: "stock", floor: 72,  ceiling: 105, startPrice: 88,  logo: stockLogo("BABA")  },
+  { symbol: "TSM",   name: "Taiwan Semiconductor Mfg.",   assetType: "stock", floor: 145, ceiling: 185, startPrice: 165, logo: stockLogo("TSM")   },
+  { symbol: "SAP",   name: "SAP SE",                      assetType: "stock", floor: 190, ceiling: 230, startPrice: 210, logo: stockLogo("SAP")   },
+  { symbol: "ASML",  name: "ASML Holding N.V.",           assetType: "stock", floor: 780, ceiling: 950, startPrice: 860, logo: stockLogo("ASML")  },
+
+  // ── Social media ──
+  { symbol: "SNAP",  name: "Snap Inc.",                   assetType: "stock", floor: 9,   ceiling: 16,  startPrice: 12,  logo: stockLogo("SNAP")  },
+  { symbol: "PINS",  name: "Pinterest, Inc.",             assetType: "stock", floor: 28,  ceiling: 42,  startPrice: 35,  logo: stockLogo("PINS")  },
+  { symbol: "TWTR",  name: "X (formerly Twitter)",        assetType: "stock", floor: 38,  ceiling: 58,  startPrice: 48,  logo: stockLogo("TWTR")  },
+  { symbol: "RDDT",  name: "Reddit, Inc.",                assetType: "stock", floor: 55,  ceiling: 85,  startPrice: 68,  logo: stockLogo("RDDT")  },
+  { symbol: "TTDV",  name: "TikTok / ByteDance Ltd.",     assetType: "stock", floor: 120, ceiling: 165, startPrice: 140, logo: stockLogo("TTDV")  },
+  { symbol: "YT",    name: "YouTube (Alphabet)",          assetType: "stock", floor: 175, ceiling: 230, startPrice: 200, logo: stockLogo("YT")    },
+
+  // ── Vehicle companies ──
+  { symbol: "F",     name: "Ford Motor Company",          assetType: "stock", floor: 10,  ceiling: 18,  startPrice: 14,  logo: stockLogo("F")     },
+  { symbol: "GM",    name: "General Motors Company",      assetType: "stock", floor: 42,  ceiling: 62,  startPrice: 52,  logo: stockLogo("GM")    },
+  { symbol: "STLA",  name: "Stellantis N.V.",             assetType: "stock", floor: 14,  ceiling: 24,  startPrice: 18,  logo: stockLogo("STLA")  },
+  { symbol: "RIVN",  name: "Rivian Automotive, Inc.",     assetType: "stock", floor: 8,   ceiling: 18,  startPrice: 12,  logo: stockLogo("RIVN")  },
+  { symbol: "LCID",  name: "Lucid Group, Inc.",           assetType: "stock", floor: 2,   ceiling: 5,   startPrice: 3,   logo: stockLogo("LCID")  },
+  { symbol: "NIO",   name: "NIO Inc.",                    assetType: "stock", floor: 4,   ceiling: 9,   startPrice: 6,   logo: stockLogo("NIO")   },
+  { symbol: "BMWYY", name: "BMW AG",                      assetType: "stock", floor: 28,  ceiling: 42,  startPrice: 35,  logo: stockLogo("BMWYY") },
+  { symbol: "MBGYY", name: "Mercedes-Benz Group AG",      assetType: "stock", floor: 52,  ceiling: 72,  startPrice: 62,  logo: stockLogo("MBGYY") },
+  { symbol: "VWAGY", name: "Volkswagen AG",               assetType: "stock", floor: 10,  ceiling: 18,  startPrice: 14,  logo: stockLogo("VWAGY") },
+  { symbol: "HMC",   name: "Honda Motor Co., Ltd.",       assetType: "stock", floor: 28,  ceiling: 40,  startPrice: 34,  logo: stockLogo("HMC")   },
+  { symbol: "HYMTF", name: "Hyundai Motor Company",       assetType: "stock", floor: 42,  ceiling: 62,  startPrice: 52,  logo: stockLogo("HYMTF") },
 ];
 
 export const MOCK_ETFS: MockAsset[] = [
