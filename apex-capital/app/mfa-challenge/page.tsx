@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 
-export default function MfaChallengePage() {
+function MfaChallengeContent() {
   const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,13 +16,11 @@ export default function MfaChallengePage() {
   const [working, setWorking] = useState(false);
   const [factorId, setFactorId] = useState<string | null>(null);
 
-  // Get the verified TOTP factor id on mount
   useEffect(() => {
     async function load() {
       const { data } = await supabase.auth.mfa.listFactors();
       const totp = data?.totp.find((f) => f.status === "verified");
       if (!totp) {
-        // No MFA factor — shouldn't be here, send them in
         router.replace(redirectTo);
         return;
       }
@@ -58,15 +56,12 @@ export default function MfaChallengePage() {
       return;
     }
 
-    // Session is now AAL2 — send them where they were going
     router.replace(redirectTo);
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F7F7F5] px-4 font-sans">
       <div className="w-full max-w-sm">
-
-        {/* Icon + heading */}
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F2]">
             <ShieldCheck className="h-7 w-7 text-[#1a6b3c]" strokeWidth={1.75} />
@@ -79,7 +74,6 @@ export default function MfaChallengePage() {
           </p>
         </div>
 
-        {/* Code input */}
         <div className="rounded-2xl border border-[#E5E5E2] bg-white p-5 shadow-sm">
           <input
             type="text"
@@ -115,15 +109,25 @@ export default function MfaChallengePage() {
           </button>
         </div>
 
-        {/* Escape hatch */}
         <p className="mt-4 text-center text-[12.5px] text-[#9CA3AF]">
           Lost access to your app?{" "}
           <a href="mailto:support@apexcapital.com" className="text-[#6B7280] underline hover:text-[#111827] transition-colors">
             Contact support
           </a>
         </p>
-
       </div>
     </div>
+  );
+}
+
+export default function MfaChallengePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F7F5]">
+        <Loader2 className="h-5 w-5 animate-spin text-[#9CA3AF]" />
+      </div>
+    }>
+      <MfaChallengeContent />
+    </Suspense>
   );
 }
