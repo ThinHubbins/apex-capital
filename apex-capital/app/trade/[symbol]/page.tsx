@@ -46,39 +46,35 @@ function KycBanner({ status }: { status: string }) {
 
   return (
     <div className={`overflow-hidden rounded-xl border ${
-      isPending
-        ? "border-amber-200 bg-amber-50"
-        : isRejected
-        ? "border-red-200 bg-red-50"
-        : "border-amber-200 bg-amber-50"
+      isPending ? "border-amber-200 bg-amber-50"
+      : isRejected ? "border-red-200 bg-red-50"
+      : "border-amber-200 bg-amber-50"
     }`}>
       <div className={`h-1 w-full ${isPending ? "bg-amber-400" : isRejected ? "bg-red-500" : "bg-amber-400"}`} />
-      <div className="flex flex-col items-center px-6 py-6 text-center">
-        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-xl ${
+      <div className="flex flex-col items-center px-4 py-5 sm:px-6 sm:py-6 text-center">
+        <div className={`mb-3 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl ${
           isPending ? "bg-amber-100" : isRejected ? "bg-red-100" : "bg-amber-100"
         }`}>
           {isRejected
-            ? <ShieldAlert className="h-6 w-6 text-red-500" />
-            : <ShieldAlert className="h-6 w-6 text-amber-500" />}
+            ? <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
+            : <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />}
         </div>
 
-        <p className={`text-[14px] font-bold ${
+        <p className={`text-[13px] sm:text-[14px] font-bold ${
           isPending ? "text-amber-800" : isRejected ? "text-red-800" : "text-amber-800"
         }`}>
-          {isPending
-            ? "Verification in review"
-            : isRejected
-            ? "Verification rejected"
+          {isPending ? "Verification in review"
+            : isRejected ? "Verification rejected"
             : "Verification required"}
         </p>
 
-        <p className={`mt-1.5 text-[12.5px] leading-snug ${
+        <p className={`mt-1.5 text-[12px] sm:text-[12.5px] leading-snug max-w-xs ${
           isPending ? "text-amber-700" : isRejected ? "text-red-700" : "text-amber-700"
         }`}>
           {isPending
-            ? "Your identity documents are being reviewed. Trading will be unlocked once approved — usually within 1–2 business days."
+            ? "Your identity documents are being reviewed. Trading will be unlocked once verified — usually within 1–2 business days."
             : isRejected
-            ? "Your verification was not approved. Please resubmit your documents to start trading."
+            ? "Your verification was not verified. Please resubmit your documents to start trading."
             : "You need to verify your identity before placing trades. This only takes a few minutes."}
         </p>
 
@@ -101,35 +97,13 @@ function KycBanner({ status }: { status: string }) {
 // ─── Confirmation Modal ─────────────────────────────────────────────
 
 function ConfirmModal({
-  side,
-  symbol,
-  name,
-  quantity,
-  unitLabel,
-  orderType,
-  price,
-  limitPrice,
-  total,
-  cashBalance,
-  conditionMet,
-  onConfirm,
-  onCancel,
-  submitting,
+  side, symbol, name, quantity, unitLabel, orderType, price,
+  limitPrice, total, cashBalance, conditionMet, onConfirm, onCancel, submitting,
 }: {
-  side: Side;
-  symbol: string;
-  name: string;
-  quantity: number;
-  unitLabel: string;
-  orderType: OrderType;
-  price: number;
-  limitPrice: string;
-  total: number;
-  cashBalance: number;
-  conditionMet: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-  submitting: boolean;
+  side: Side; symbol: string; name: string; quantity: number; unitLabel: string;
+  orderType: OrderType; price: number; limitPrice: string; total: number;
+  cashBalance: number; conditionMet: boolean; onConfirm: () => void;
+  onCancel: () => void; submitting: boolean;
 }) {
   const execPrice = orderType === "limit" ? Number(limitPrice) : price;
   const willPend = orderType === "limit" && !conditionMet;
@@ -141,19 +115,17 @@ function ConfirmModal({
     >
       <div className="w-full max-w-sm overflow-hidden rounded-t-2xl border border-[#E5E5E2] bg-white shadow-2xl sm:rounded-2xl">
         <div className={`h-1.5 w-full ${willPend ? "bg-amber-400" : side === "buy" ? "bg-[#111827]" : "bg-red-500"}`} />
-        <div className="px-6 pb-7 pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
-            Confirm order
-          </p>
-          <h2 className="mt-1 text-[20px] font-extrabold tracking-tight text-[#111827]">
+        <div className="px-5 pb-7 pt-5 sm:px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">Confirm order</p>
+          <h2 className="mt-1 text-[18px] sm:text-[20px] font-extrabold tracking-tight text-[#111827]">
             {side === "buy" ? "Buy" : "Sell"} {symbol}
           </h2>
-          <p className="mt-0.5 text-[13px] text-[#6B7280]">{name}</p>
+          <p className="mt-0.5 text-[12px] sm:text-[13px] text-[#6B7280]">{name}</p>
 
           {willPend && (
-            <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
               <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-              <p className="text-[12.5px] text-amber-700">
+              <p className="text-[12px] sm:text-[12.5px] text-amber-700">
                 {side === "buy"
                   ? `Market price ($${fmt(price)}) is above your limit. This order will sit pending until the price drops to $${fmt(Number(limitPrice))} or below.`
                   : `Market price ($${fmt(price)}) is below your limit. This order will sit pending until the price rises to $${fmt(Number(limitPrice))} or above.`}
@@ -161,7 +133,7 @@ function ConfirmModal({
             </div>
           )}
 
-          <div className="mt-5 space-y-2.5 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-4 py-4">
+          <div className="mt-4 sm:mt-5 space-y-2.5 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-4 py-4">
             {[
               ["Order type", orderType === "market" ? "Market order" : "Limit order"],
               ["Status", willPend ? "Will queue as pending" : "Fills immediately"],
@@ -169,9 +141,11 @@ function ConfirmModal({
               ["Est. price", `$${fmt(execPrice)}`],
               ...(willPend ? [] : [["Est. total", `$${fmt(total)}`]]),
             ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="text-[13px] text-[#6B7280]">{label}</span>
-                <span className={`text-[13px] font-semibold ${label === "Status" && willPend ? "text-amber-600" : "text-[#111827]"}`}>
+              <div key={label} className="flex items-center justify-between gap-2">
+                <span className="text-[12px] sm:text-[13px] text-[#6B7280]">{label}</span>
+                <span className={`text-[12px] sm:text-[13px] font-semibold text-right ${
+                  label === "Status" && willPend ? "text-amber-600" : "text-[#111827]"
+                }`}>
                   {value}
                 </span>
               </div>
@@ -181,17 +155,17 @@ function ConfirmModal({
           {side === "buy" && !willPend && (
             <div className="mt-3 flex items-center justify-between rounded-lg border border-[#E5E5E2] bg-white px-3.5 py-2.5">
               <span className="text-[12px] text-[#9CA3AF]">Cash after order</span>
-              <span className={`text-[13px] font-semibold ${cashBalance - total < 0 ? "text-red-600" : "text-[#111827]"}`}>
+              <span className={`text-[12px] sm:text-[13px] font-semibold ${cashBalance - total < 0 ? "text-red-600" : "text-[#111827]"}`}>
                 ${fmt(Math.max(0, cashBalance - total))}
               </span>
             </div>
           )}
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-4 sm:mt-5 flex gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 rounded-xl border border-[#E5E5E2] bg-white py-3 text-[14px] font-medium text-[#6B7280] hover:text-[#111827]"
+              className="flex-1 rounded-xl border border-[#E5E5E2] bg-white py-3 text-[13px] sm:text-[14px] font-medium text-[#6B7280] hover:text-[#111827]"
             >
               Cancel
             </button>
@@ -199,23 +173,19 @@ function ConfirmModal({
               type="button"
               onClick={onConfirm}
               disabled={submitting}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-semibold text-white transition-opacity disabled:opacity-60 ${
-                willPend
-                  ? "bg-amber-500 hover:opacity-90"
-                  : side === "buy"
-                  ? "bg-[#111827] hover:opacity-90"
-                  : "bg-red-600 hover:opacity-90"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-[13px] sm:text-[14px] font-semibold text-white transition-opacity disabled:opacity-60 ${
+                willPend ? "bg-amber-500 hover:opacity-90"
+                : side === "buy" ? "bg-[#111827] hover:opacity-90"
+                : "bg-red-600 hover:opacity-90"
               }`}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {submitting
-                ? "Placing…"
-                : willPend
-                ? "Place Limit Order"
+              {submitting ? "Placing…"
+                : willPend ? "Place Limit Order"
                 : `Confirm ${side === "buy" ? "Buy" : "Sell"}`}
             </button>
           </div>
-          <p className="mt-3 text-center text-[11px] text-[#9CA3AF]">
+          <p className="mt-3 text-center text-[11px] text-[#9CA3AF] leading-snug">
             {willPend
               ? "Pending orders can be cancelled from your portfolio at any time."
               : "Market orders execute at the next available price. Prices may vary slightly."}
@@ -229,36 +199,25 @@ function ConfirmModal({
 // ─── Success Modal ──────────────────────────────────────────────────
 
 function SuccessModal({
-  side,
-  symbol,
-  quantity,
-  total,
-  isPending,
-  limitPrice,
-  onClose,
+  side, symbol, quantity, total, isPending, limitPrice, onClose,
 }: {
-  side: Side;
-  symbol: string;
-  quantity: number;
-  total: number;
-  isPending: boolean;
-  limitPrice?: number;
-  onClose: () => void;
+  side: Side; symbol: string; quantity: number; total: number;
+  isPending: boolean; limitPrice?: number; onClose: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-2xl">
         <div className={`h-1.5 w-full ${isPending ? "bg-amber-400" : "bg-[#1a6b3c]"}`} />
-        <div className="flex flex-col items-center px-8 pb-8 pt-6 text-center">
-          <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${isPending ? "bg-amber-50" : "bg-[#F0F7F2]"}`}>
+        <div className="flex flex-col items-center px-6 pb-7 pt-6 sm:pb-8 text-center">
+          <div className={`mb-4 flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-2xl ${isPending ? "bg-amber-50" : "bg-[#F0F7F2]"}`}>
             {isPending
-              ? <Clock className="h-7 w-7 text-amber-500" />
-              : <Check className="h-7 w-7 text-[#1a6b3c]" />}
+              ? <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-amber-500" />
+              : <Check className="h-6 w-6 sm:h-7 sm:w-7 text-[#1a6b3c]" />}
           </div>
-          <h2 className="text-[20px] font-extrabold tracking-tight text-[#111827]">
+          <h2 className="text-[18px] sm:text-[20px] font-extrabold tracking-tight text-[#111827]">
             {isPending ? "Order queued!" : "Order placed!"}
           </h2>
-          <p className="mt-1.5 text-[13.5px] text-[#6B7280]">
+          <p className="mt-1.5 text-[12.5px] sm:text-[13.5px] text-[#6B7280] leading-snug max-w-xs">
             {isPending
               ? <>Your limit {side} for <span className="font-semibold text-[#111827]">{quantity} {symbol}</span> is pending at <span className="font-semibold text-[#111827]">${fmt(limitPrice ?? 0)}</span>. It will fill automatically when the price is reached.</>
               : <>Your {side} order for <span className="font-semibold text-[#111827]">{quantity} {symbol}</span> has been submitted.</>}
@@ -266,16 +225,16 @@ function SuccessModal({
           {!isPending && (
             <p className="mt-1 text-[13px] font-semibold text-[#111827]">${fmt(total)}</p>
           )}
-          <div className="mt-6 flex w-full flex-col gap-2.5">
+          <div className="mt-5 sm:mt-6 flex w-full flex-col gap-2.5">
             <button
               onClick={onClose}
-              className="w-full rounded-xl bg-[#111827] py-3 text-[14px] font-semibold text-white hover:opacity-90"
+              className="w-full rounded-xl bg-[#111827] py-3 text-[13px] sm:text-[14px] font-semibold text-white hover:opacity-90"
             >
               Back to markets
             </button>
             <Link
               href="/portfolio"
-              className="w-full rounded-xl border border-[#E5E5E2] py-3 text-center text-[14px] font-medium text-[#6B7280] hover:text-[#111827]"
+              className="w-full rounded-xl border border-[#E5E5E2] py-3 text-center text-[13px] sm:text-[14px] font-medium text-[#6B7280] hover:text-[#111827]"
             >
               {isPending ? "View open orders" : "View portfolio"}
             </Link>
@@ -328,14 +287,12 @@ export default function TradePage() {
   const qtyDecimals = assetType === "crypto" ? 4 : 0;
   const quantityChips = assetType === "crypto" ? [0.01, 0.1, 0.5, 1] : [1, 5, 10, 25];
 
-  // Auth guard
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.replace("/login");
     });
   }, []);
 
-  // ── State ──
   const [side, setSide] = useState<Side>("buy");
   const [orderType, setOrderType] = useState<OrderType>("market");
   const [quantityInput, setQuantityInput] = useState(assetType === "crypto" ? "0.01" : "1");
@@ -357,7 +314,6 @@ export default function TradePage() {
   const [priceChange, setPriceChange] = useState<number | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  // ── Seed price fields from the override-merged asset once it loads ──
   useEffect(() => {
     if (!mockAsset) return;
     setLivePrice(mockAsset.startPrice);
@@ -365,7 +321,6 @@ export default function TradePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mockAsset]);
 
-  // ── Load profile + holding + pending orders ──
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -418,7 +373,6 @@ export default function TradePage() {
     load();
   }, [symbol]);
 
-  // ── Refresh live price every 15s + auto-fill pending limit orders ──
   useEffect(() => {
     async function refreshPrice() {
       try {
@@ -440,7 +394,6 @@ export default function TradePage() {
     return () => clearInterval(iv);
   }, [symbol, pendingOrders]);
 
-  // ── Auto-fill logic ──
   async function autoFillPendingOrders(currentPrice: number) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -485,15 +438,8 @@ export default function TradePage() {
       if (profile) {
         const currentBalance = Number(profile.cash_balance);
         const newBalance =
-          order.side === "buy"
-            ? currentBalance - total
-            : currentBalance + total;
-
-        await supabase
-          .from("profiles")
-          .update({ cash_balance: newBalance })
-          .eq("id", user.id);
-
+          order.side === "buy" ? currentBalance - total : currentBalance + total;
+        await supabase.from("profiles").update({ cash_balance: newBalance }).eq("id", user.id);
         setCashBalance(newBalance);
       }
 
@@ -501,38 +447,30 @@ export default function TradePage() {
     }
   }
 
-  // ── Cancel a pending order ──
   async function handleCancelOrder(orderId: string) {
     setCancellingId(orderId);
     try {
-      await supabase
-        .from("orders")
-        .update({ status: "cancelled" })
-        .eq("id", orderId);
+      await supabase.from("orders").update({ status: "cancelled" }).eq("id", orderId);
       setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
     } finally {
       setCancellingId(null);
     }
   }
 
-  // ── Derived ──
   const quantity = Math.max(0, Number(quantityInput) || 0);
   const limitPriceNum = Number(limitPriceInput) || 0;
   const execPrice = orderType === "market" ? livePrice : limitPriceNum;
   const estimatedTotal = quantity * execPrice;
   const priceUp = (priceChange ?? 0) >= 0;
-  const kycApproved = ["approved", "verified"].includes(kycStatus ?? "");
+  const kycverified = ["verified", "verified"].includes(kycStatus ?? "");
 
   const limitConditionMet =
     orderType === "limit"
-      ? side === "buy"
-        ? livePrice <= limitPriceNum
-        : livePrice >= limitPriceNum
+      ? side === "buy" ? livePrice <= limitPriceNum : livePrice >= limitPriceNum
       : true;
 
   const willBePending = orderType === "limit" && !limitConditionMet;
 
-  // ── Validation ──
   function validate(): string | null {
     if (!quantity || quantity <= 0) return "Enter a valid quantity.";
     if (orderType === "limit") {
@@ -545,9 +483,7 @@ export default function TradePage() {
     }
     if (side === "sell") {
       const owned = holding?.quantity ?? 0;
-      const pendingSellQty = pendingOrders
-        .filter((o) => o.side === "sell")
-        .reduce((acc, o) => acc + o.quantity, 0);
+      const pendingSellQty = pendingOrders.filter((o) => o.side === "sell").reduce((acc, o) => acc + o.quantity, 0);
       const available = owned - pendingSellQty;
       if (quantity > available)
         return `You only have ${available} ${unitLabel} available (${owned} owned, ${pendingSellQty} in pending orders).`;
@@ -568,18 +504,16 @@ export default function TradePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // ── KYC gate (server-side double-check) ───────────────────────
       const { data: freshProfile } = await supabase
         .from("profiles")
         .select("kyc_status")
         .eq("id", user.id)
         .single();
 
-      if (freshProfile?.kyc_status !== "approved") {
+      if (freshProfile?.kyc_status !== "verified") {
         setKycStatus(freshProfile?.kyc_status ?? "none");
         throw new Error("KYC_REQUIRED");
       }
-      // ─────────────────────────────────────────────────────────────
 
       const status: OrderStatus = willBePending ? "pending" : "filled";
       const fillPrice = willBePending ? null : livePrice;
@@ -604,13 +538,8 @@ export default function TradePage() {
 
       if (status === "filled" && cashBalance !== null) {
         const newBalance =
-          side === "buy"
-            ? cashBalance - (fillTotal ?? 0)
-            : cashBalance + (fillTotal ?? 0);
-        await supabase
-          .from("profiles")
-          .update({ cash_balance: newBalance })
-          .eq("id", user.id);
+          side === "buy" ? cashBalance - (fillTotal ?? 0) : cashBalance + (fillTotal ?? 0);
+        await supabase.from("profiles").update({ cash_balance: newBalance }).eq("id", user.id);
         setCashBalance(newBalance);
       }
 
@@ -627,11 +556,8 @@ export default function TradePage() {
 
         if (newOrder) {
           setPendingOrders((prev) => [{
-            id: newOrder.id,
-            side,
-            quantity,
-            limit_price: limitPriceNum,
-            created_at: newOrder.created_at,
+            id: newOrder.id, side, quantity,
+            limit_price: limitPriceNum, created_at: newOrder.created_at,
           }, ...prev]);
         }
       }
@@ -652,30 +578,19 @@ export default function TradePage() {
     <>
       {showConfirm && cashBalance !== null && (
         <ConfirmModal
-          side={side}
-          symbol={symbol}
-          name={name}
-          quantity={quantity}
-          unitLabel={unitLabel}
-          orderType={orderType}
-          price={livePrice}
-          limitPrice={limitPriceInput}
-          total={estimatedTotal}
-          cashBalance={cashBalance}
-          conditionMet={limitConditionMet}
-          onConfirm={handleConfirm}
-          onCancel={() => setShowConfirm(false)}
+          side={side} symbol={symbol} name={name} quantity={quantity}
+          unitLabel={unitLabel} orderType={orderType} price={livePrice}
+          limitPrice={limitPriceInput} total={estimatedTotal}
+          cashBalance={cashBalance} conditionMet={limitConditionMet}
+          onConfirm={handleConfirm} onCancel={() => setShowConfirm(false)}
           submitting={submitting}
         />
       )}
 
       {showSuccess && (
         <SuccessModal
-          side={side}
-          symbol={symbol}
-          quantity={quantity}
-          total={estimatedTotal}
-          isPending={lastOrderWasPending}
+          side={side} symbol={symbol} quantity={quantity}
+          total={estimatedTotal} isPending={lastOrderWasPending}
           limitPrice={limitPriceNum}
           onClose={() => { setShowSuccess(false); router.push("/markets"); }}
         />
@@ -684,7 +599,8 @@ export default function TradePage() {
       <div className="min-h-screen bg-[#F7F7F5] font-sans text-[#111827]">
         <Navbar variant="auth" />
 
-        <main className="mx-auto max-w-2xl px-6 py-8 lg:px-10">
+        <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+          {/* Back link */}
           <Link
             href="/markets"
             className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6B7280] hover:text-[#111827]"
@@ -693,12 +609,14 @@ export default function TradePage() {
           </Link>
 
           {/* Asset header */}
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <AssetLogo symbol={symbol} logo={mockAsset?.logo ?? ""} size={44} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-[20px] font-extrabold tracking-tight text-[#111827]">{symbol}</h1>
+          <div className="mb-5 sm:mb-6 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="shrink-0">
+                <AssetLogo symbol={symbol} logo={mockAsset?.logo ?? ""} size={40} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h1 className="text-[18px] sm:text-[20px] font-extrabold tracking-tight text-[#111827]">{symbol}</h1>
                   <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                     assetType === "etf" ? "bg-indigo-50 text-indigo-600"
                     : assetType === "crypto" ? "bg-orange-50 text-orange-600"
@@ -707,15 +625,15 @@ export default function TradePage() {
                     {assetType}
                   </span>
                 </div>
-                <p className="text-[13px] text-[#6B7280]">{name}</p>
+                <p className="text-[12px] sm:text-[13px] text-[#6B7280] truncate">{name}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-[22px] font-extrabold tracking-tight text-[#111827]">
+            <div className="text-right shrink-0">
+              <p className="text-[20px] sm:text-[22px] font-extrabold tracking-tight text-[#111827]">
                 ${fmt(livePrice)}
               </p>
               {priceChange !== null && (
-                <p className={`flex items-center justify-end gap-1 text-[13px] font-medium ${priceUp ? "text-[#1a6b3c]" : "text-red-500"}`}>
+                <p className={`flex items-center justify-end gap-1 text-[12px] sm:text-[13px] font-medium ${priceUp ? "text-[#1a6b3c]" : "text-red-500"}`}>
                   {priceUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
                   {priceUp ? "+" : ""}{priceChange.toFixed(2)}% today
                 </p>
@@ -723,52 +641,50 @@ export default function TradePage() {
             </div>
           </div>
 
-          {/* Mock price chart */}
+          {/* Chart */}
           {!assetLoading && mockAsset && series.length > 0 && (
             <MockCryptoChart series={series} floor={mockAsset.floor} ceiling={mockAsset.ceiling} />
           )}
 
           {/* Current holding */}
           {holding && (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-[#E5E5E2] bg-white px-5 py-3.5 shadow-sm">
-              <p className="text-[13px] text-[#6B7280]">
+            <div className="mb-3 sm:mb-4 flex items-center justify-between rounded-xl border border-[#E5E5E2] bg-white px-4 sm:px-5 py-3 sm:py-3.5 shadow-sm gap-3">
+              <p className="text-[12px] sm:text-[13px] text-[#6B7280]">
                 You own <span className="font-semibold text-[#111827]">{holding.quantity} {unitLabel}</span>
               </p>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-[13px] font-semibold text-[#111827]">
                   ${fmt(holding.quantity * livePrice)}
                 </p>
-                <p className="text-[11px] text-[#9CA3AF]">
-                  avg ${fmt(holding.avg_cost)}
-                </p>
+                <p className="text-[11px] text-[#9CA3AF]">avg ${fmt(holding.avg_cost)}</p>
               </div>
             </div>
           )}
 
           {/* Cash balance */}
           {cashBalance !== null && (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-[#E5E5E2] bg-white px-5 py-3.5 shadow-sm">
-              <p className="flex items-center gap-2 text-[13px] text-[#6B7280]">
+            <div className="mb-3 sm:mb-4 flex items-center justify-between rounded-xl border border-[#E5E5E2] bg-white px-4 sm:px-5 py-3 sm:py-3.5 shadow-sm">
+              <p className="flex items-center gap-2 text-[12px] sm:text-[13px] text-[#6B7280]">
                 <Wallet className="h-3.5 w-3.5 text-[#9CA3AF]" /> Available cash
               </p>
-              <p className="text-[14px] font-semibold text-[#111827]">${fmt(cashBalance)}</p>
+              <p className="text-[13px] sm:text-[14px] font-semibold text-[#111827]">${fmt(cashBalance)}</p>
             </div>
           )}
 
-          {/* Pending limit orders for this symbol */}
+          {/* Pending limit orders */}
           {pendingOrders.length > 0 && (
-            <div className="mb-5 overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
+            <div className="mb-4 sm:mb-5 overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
               <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-2.5">
-                <Clock className="h-3.5 w-3.5 text-amber-500" />
+                <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 <p className="text-[12px] font-semibold text-amber-700">
                   {pendingOrders.length} pending order{pendingOrders.length !== 1 ? "s" : ""} for {symbol}
                 </p>
               </div>
               <div className="divide-y divide-amber-100">
                 {pendingOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-[13px] font-semibold text-[#111827]">
+                  <div key={order.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[12px] sm:text-[13px] font-semibold text-[#111827] truncate">
                         {order.side === "buy" ? "Buy" : "Sell"} {order.quantity} @ ${fmt(order.limit_price)}
                       </p>
                       <p className="text-[11px] text-[#9CA3AF]">
@@ -779,7 +695,7 @@ export default function TradePage() {
                       type="button"
                       onClick={() => handleCancelOrder(order.id)}
                       disabled={cancellingId === order.id}
-                      className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-[12px] font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                      className="shrink-0 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-[12px] font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                     >
                       {cancellingId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Cancel"}
                     </button>
@@ -789,22 +705,25 @@ export default function TradePage() {
             </div>
           )}
 
-          {/* ── KYC banner — shown when not approved ── */}
-          {kycStatus !== null && !kycApproved && (
-            <div className="mb-5">
+          {/* KYC banner */}
+          {kycStatus !== null && !kycverified && (
+            <div className="mb-4 sm:mb-5">
               <KycBanner status={kycStatus} />
             </div>
           )}
 
-          {/* Trade card — always visible but form disabled when KYC not approved */}
-          <div className={`overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-sm ${!kycApproved && kycStatus !== null ? "opacity-50 pointer-events-none select-none" : ""}`}>
+          {/* Trade card */}
+          <div className={`overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-sm ${
+            !kycverified && kycStatus !== null ? "opacity-50 pointer-events-none select-none" : ""
+          }`}>
+            {/* Buy / Sell tabs */}
             <div className="flex border-b border-[#E5E5E2]">
               {(["buy", "sell"] as Side[]).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => { setSide(s); setFormError(null); }}
-                  className={`flex-1 py-3.5 text-[14px] font-semibold capitalize transition-colors ${
+                  className={`flex-1 py-3 sm:py-3.5 text-[13px] sm:text-[14px] font-semibold capitalize transition-colors ${
                     side === s
                       ? s === "buy"
                         ? "border-b-2 border-[#111827] text-[#111827]"
@@ -817,7 +736,8 @@ export default function TradePage() {
               ))}
             </div>
 
-            <div className="space-y-5 p-6">
+            <div className="space-y-4 sm:space-y-5 p-4 sm:p-6">
+              {/* Order type */}
               <div>
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
                   Order type
@@ -833,62 +753,56 @@ export default function TradePage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                 </div>
-                {orderType === "market" && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-[#9CA3AF]">
-                    <Info className="h-3 w-3" />
-                    Executes immediately at the best available price.
-                  </p>
-                )}
-                {orderType === "limit" && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-[#9CA3AF]">
-                    <Info className="h-3 w-3" />
-                    Order fills only when the price reaches your target.
-                  </p>
-                )}
+                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] sm:text-[11.5px] text-[#9CA3AF]">
+                  <Info className="h-3 w-3 shrink-0" />
+                  {orderType === "market"
+                    ? "Executes immediately at the best available price."
+                    : "Order fills only when the price reaches your target."}
+                </p>
               </div>
 
+              {/* Limit price */}
               {orderType === "limit" && (
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
                     Limit price
                   </label>
                   <div className="flex items-center gap-2 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-4 py-3 focus-within:border-[#111827] focus-within:bg-white">
-                    <span className="text-[16px] font-semibold text-[#9CA3AF]">$</span>
+                    <span className="text-[15px] sm:text-[16px] font-semibold text-[#9CA3AF]">$</span>
                     <input
                       type="number"
                       min={0}
                       step={0.01}
                       value={limitPriceInput}
                       onChange={(e) => setLimitPriceInput(e.target.value)}
-                      className="flex-1 bg-transparent text-[16px] font-semibold text-[#111827] outline-none"
+                      className="flex-1 bg-transparent text-[15px] sm:text-[16px] font-semibold text-[#111827] outline-none min-w-0"
                       placeholder={livePrice.toFixed(2)}
                     />
                   </div>
                   {limitPriceNum > 0 && (
-                    <div className={`mt-2 flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium ${
-                      limitConditionMet
-                        ? "bg-[#F0F7F2] text-[#1a6b3c]"
-                        : "bg-amber-50 text-amber-700"
+                    <div className={`mt-2 flex items-start gap-1.5 rounded-lg px-3 py-2 text-[11.5px] sm:text-[12px] font-medium ${
+                      limitConditionMet ? "bg-[#F0F7F2] text-[#1a6b3c]" : "bg-amber-50 text-amber-700"
                     }`}>
                       {limitConditionMet
-                        ? <><Check className="h-3.5 w-3.5" /> Condition met — order will fill immediately at market price (${fmt(livePrice)})</>
-                        : <><Clock className="h-3.5 w-3.5" /> Will queue as pending until price {side === "buy" ? "drops to" : "rises to"} ${fmt(limitPriceNum)}</>}
+                        ? <><Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> Condition met — order will fill immediately at market price (${fmt(livePrice)})</>
+                        : <><Clock className="h-3.5 w-3.5 shrink-0 mt-0.5" /> Will queue as pending until price {side === "buy" ? "drops to" : "rises to"} ${fmt(limitPriceNum)}</>}
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Quantity */}
               <div>
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
                   {assetType === "crypto" ? "Coins" : "Shares"}
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() =>
                       setQuantityInput((q) => Math.max(qtyMin, Number(q || qtyMin) - qtyStep).toFixed(qtyDecimals))
                     }
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] text-[18px] font-medium text-[#374151] hover:bg-[#EEEEEC]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] text-[18px] font-medium text-[#374151] hover:bg-[#EEEEEC] active:scale-95"
                   >
                     −
                   </button>
@@ -898,20 +812,21 @@ export default function TradePage() {
                     step={qtyStep}
                     value={quantityInput}
                     onChange={(e) => setQuantityInput(e.target.value)}
-                    className="flex-1 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] py-2.5 text-center text-[18px] font-extrabold text-[#111827] outline-none focus:border-[#111827] focus:bg-white"
+                    className="flex-1 min-w-0 rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] py-2.5 text-center text-[16px] sm:text-[18px] font-extrabold text-[#111827] outline-none focus:border-[#111827] focus:bg-white"
                   />
                   <button
                     type="button"
                     onClick={() =>
                       setQuantityInput((q) => (Number(q || 0) + qtyStep).toFixed(qtyDecimals))
                     }
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] text-[18px] font-medium text-[#374151] hover:bg-[#EEEEEC]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] text-[18px] font-medium text-[#374151] hover:bg-[#EEEEEC] active:scale-95"
                   >
                     +
                   </button>
                 </div>
               </div>
 
+              {/* Quantity chips */}
               <div className="flex flex-wrap gap-2">
                 {quantityChips.map((q) => (
                   <button
@@ -929,57 +844,58 @@ export default function TradePage() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-4 py-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-[#6B7280]">
+              {/* Order summary */}
+              <div className="rounded-xl border border-[#E5E5E2] bg-[#F7F7F5] px-4 py-3.5 sm:py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] sm:text-[13px] text-[#6B7280]">
                     {quantity} × ${fmt(execPrice)}
                     {willBePending && (
                       <span className="ml-1 text-[11px] text-[#9CA3AF]">(limit)</span>
                     )}
                   </span>
-                  <span className="text-[17px] font-extrabold text-[#111827]">
+                  <span className="text-[15px] sm:text-[17px] font-extrabold text-[#111827]">
                     ${fmt(estimatedTotal)}
                   </span>
                 </div>
                 {willBePending && (
-                  <p className="mt-1.5 text-[11.5px] text-amber-600">
+                  <p className="mt-1.5 text-[11px] sm:text-[11.5px] text-amber-600">
                     Cash reserved when the order fills, not now.
                   </p>
                 )}
                 {!willBePending && side === "buy" && cashBalance !== null && (
                   <div className="mt-2 flex items-center justify-between border-t border-[#E5E5E2] pt-2">
-                    <span className="text-[12px] text-[#9CA3AF]">Cash after</span>
-                    <span className={`text-[13px] font-semibold ${cashBalance - estimatedTotal < 0 ? "text-red-600" : "text-[#6B7280]"}`}>
+                    <span className="text-[11px] sm:text-[12px] text-[#9CA3AF]">Cash after</span>
+                    <span className={`text-[12px] sm:text-[13px] font-semibold ${cashBalance - estimatedTotal < 0 ? "text-red-600" : "text-[#6B7280]"}`}>
                       ${fmt(Math.max(0, cashBalance - estimatedTotal))}
                     </span>
                   </div>
                 )}
               </div>
 
+              {/* Form error */}
               {formError && (
                 formError === "KYC_REQUIRED" ? (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12.5px] sm:text-[13px] text-amber-700">
                     <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                     Trading requires identity verification.{" "}
                     <Link href="/kyc" className="font-medium underline">Complete KYC →</Link>
                   </div>
                 ) : (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] sm:text-[13px] text-red-700">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {formError}
                   </div>
                 )
               )}
 
+              {/* CTA */}
               <button
                 type="button"
                 onClick={handleReview}
                 disabled={loadingProfile || quantity <= 0}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[14px] font-semibold text-white transition-opacity disabled:opacity-50 ${
-                  willBePending
-                    ? "bg-amber-500 hover:opacity-90"
-                    : side === "buy"
-                    ? "bg-[#111827] hover:opacity-90"
-                    : "bg-red-600 hover:opacity-90"
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] sm:text-[14px] font-semibold text-white transition-opacity disabled:opacity-50 ${
+                  willBePending ? "bg-amber-500 hover:opacity-90"
+                  : side === "buy" ? "bg-[#111827] hover:opacity-90"
+                  : "bg-red-600 hover:opacity-90"
                 }`}
               >
                 {loadingProfile
@@ -989,7 +905,7 @@ export default function TradePage() {
                   : `Review ${side === "buy" ? "Buy" : "Sell"} Order`}
               </button>
 
-              <p className="text-center text-[11.5px] text-[#9CA3AF]">
+              <p className="text-center text-[11px] sm:text-[11.5px] text-[#9CA3AF] leading-snug">
                 {willBePending
                   ? "Pending orders can be cancelled at any time."
                   : "Orders are processed during market hours. Prices may vary at execution."}

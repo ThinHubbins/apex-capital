@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthUser } from "@/lib/supabase/use-auth-user";
 import { AssetLogo } from "../../components/Assetslogo";
@@ -118,7 +117,6 @@ export default function Markets() {
               {error}
             </div>
           )}
-
           <div className="mt-4 divide-y divide-[#E5E5E2] rounded-xl border border-[#E5E5E2] bg-white">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
@@ -176,7 +174,6 @@ export default function Markets() {
                           Trade
                         </button>
 
-                        <ArrowUpRight className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
                       </div>
                     </div>
                   );

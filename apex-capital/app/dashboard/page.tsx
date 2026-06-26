@@ -446,11 +446,11 @@ export default function DashboardPage() {
               <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Available cash</p>
               <p className="mt-1.5 text-[24px] font-bold text-[#111827]">${fmt(cashBalance)}</p>
               <div className="mt-3 flex gap-2">
-                <Link href="/wallet/deposit"
+                <Link href="/dashboard/deposit"
                   className="flex-1 rounded-lg bg-[#111827] py-1.5 text-center text-[12px] font-medium text-white hover:opacity-90">
                   Deposit
                 </Link>
-                <Link href="/wallet/withdraw"
+                <Link href="/dashboard/withdraw"
                   className="flex-1 rounded-lg border border-[#E5E5E2] py-1.5 text-center text-[12px] font-medium text-[#6B7280] hover:text-[#111827]">
                   Withdraw
                 </Link>
