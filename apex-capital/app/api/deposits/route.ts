@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const MIN_DEPOSIT = 10;
-const MAX_DEPOSIT = 50000;
+const MAX_DEPOSIT = 500000;
 
 const CRYPTO_OPTIONS = [
   { asset: "BTC", network: "BTC NETWORK", address: "bc1qzd67jzq0n7sm82jt0nyxh4egwyg0dtzvvdkuee" },

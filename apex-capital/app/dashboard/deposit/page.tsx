@@ -31,7 +31,7 @@ type CryptoOption = {
 };
 
 const MIN_DEPOSIT = 10;
-const SLIDER_MAX = 10000;
+const SLIDER_MAX = 500000;
 const QUICK_AMOUNTS = [100, 500, 1000, 5000];
 const POLL_INTERVAL_MS = 30000;
 
@@ -71,7 +71,7 @@ function StatusBadge({ status }: { status: DepositStatus }) {
   );
 }
 
-// ─── Wire Transfer Submitted Modal (the original modal) ──────────────────────
+// ─── Wire Transfer Submitted Modal ───────────────────────────────────────────
 
 function WireSubmittedModal({
   amount,
@@ -95,7 +95,6 @@ function WireSubmittedModal({
     >
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-2xl">
         <div className="h-1.5 w-full bg-[#111827]" />
-
         <div className="px-7 pb-7 pt-6">
           <div className="mb-5 flex flex-col items-center text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F2]">
@@ -115,29 +114,20 @@ function WireSubmittedModal({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
               What happens next
             </p>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                1
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">1</div>
               <p className="text-[13px] text-[#374151]">
                 We'll send you an email with our bank / payment details so you know exactly where to transfer the funds.
               </p>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                2
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">2</div>
               <p className="text-[13px] text-[#374151]">
                 Make your transfer using the details provided in that email.
               </p>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                3
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">3</div>
               <p className="text-[13px] text-[#374151]">
                 Once confirmed, your balance will be updated and you'll be notified here.
               </p>
@@ -171,7 +161,7 @@ function WireSubmittedModal({
   );
 }
 
-// ─── Crypto Submitted Modal (new) ─────────────────────────────────────────────
+// ─── Crypto Submitted Modal ───────────────────────────────────────────────────
 
 function CryptoSubmittedModal({
   amount,
@@ -197,7 +187,6 @@ function CryptoSubmittedModal({
     >
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E5E5E2] bg-white shadow-2xl">
         <div className="h-1.5 w-full bg-[#111827]" />
-
         <div className="px-7 pb-7 pt-6">
           <div className="mb-5 flex flex-col items-center text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F2]">
@@ -217,29 +206,20 @@ function CryptoSubmittedModal({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
               What happens next
             </p>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                1
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">1</div>
               <p className="text-[13px] text-[#374151]">
                 Send your funds to the {crypto.asset} ({crypto.network}) address you were shown, if you haven't already.
               </p>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                2
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">2</div>
               <p className="text-[13px] text-[#374151]">
                 Our team confirms the transaction on the blockchain.
               </p>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">
-                3
-              </div>
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-bold text-white">3</div>
               <p className="text-[13px] text-[#374151]">
                 Once confirmed, your balance will be updated and you'll be notified here.
               </p>
@@ -365,13 +345,9 @@ function CryptoAddressPicker({
                   className="flex shrink-0 items-center gap-1 rounded-md border border-[#E5E5E2] px-2 py-1 text-[11px] font-medium text-[#6B7280] hover:border-[#111827] hover:text-[#111827]"
                 >
                   {copiedKey === cryptoKey(c) ? (
-                    <>
-                      <Check className="h-3 w-3 text-[#1a6b3c]" /> Copied
-                    </>
+                    <><Check className="h-3 w-3 text-[#1a6b3c]" /> Copied</>
                   ) : (
-                    <>
-                      <Copy className="h-3 w-3" /> Copy
-                    </>
+                    <><Copy className="h-3 w-3" /> Copy</>
                   )}
                 </button>
               </div>
@@ -396,15 +372,12 @@ export default function DepositPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Crypto-specific state
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoOption | null>(null);
 
-  // Wire-specific state
   const [senderBankName, setSenderBankName] = useState("");
   const [senderAccountNumber, setSenderAccountNumber] = useState("");
   const [senderBranch, setSenderBranch] = useState("");
 
-  // Modal state
   const [wireModalAmount, setWireModalAmount] = useState<number | null>(null);
   const [cryptoModalState, setCryptoModalState] = useState<{ amount: number; crypto: CryptoOption } | null>(null);
 
@@ -439,7 +412,6 @@ export default function DepositPage() {
 
   useEffect(() => { fetchDeposits(); }, []);
 
-  // Poll while any deposit is pending
   useEffect(() => {
     const hasPending = deposits.some((d) => d.status === "pending");
     if (pollRef.current) clearInterval(pollRef.current);
@@ -463,8 +435,9 @@ export default function DepositPage() {
     setRefreshing(false);
   }
 
+  // No upper clamp — users can deposit any amount above the minimum
   function syncAmount(value: number) {
-    const clamped = Math.max(0, Math.min(value, 1_000_000));
+    const clamped = Math.max(0, value);
     setAmount(clamped);
     setAmountInput(String(clamped));
   }
@@ -552,7 +525,6 @@ export default function DepositPage() {
 
   return (
     <>
-      {/* Modals — rendered above everything else */}
       {wireModalAmount !== null && (
         <WireSubmittedModal
           amount={wireModalAmount}
@@ -594,13 +566,11 @@ export default function DepositPage() {
             </div>
           )}
 
-          {/* Method selection */}
           <div className="mb-5">
             <p className="mb-2.5 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">Deposit method</p>
             <MethodToggle method={method} onChange={setMethod} />
           </div>
 
-          {/* Amount selection */}
           <div className="rounded-2xl border border-[#E5E5E2] bg-white p-6 shadow-sm">
             <p className="text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
               {method === "crypto" ? "USD value you sent" : "Amount to deposit"}
@@ -651,7 +621,6 @@ export default function DepositPage() {
               ))}
             </div>
 
-            {/* Crypto-specific section */}
             {method === "crypto" && (
               <div className="mt-6 border-t border-[#F3F4F6] pt-5">
                 <p className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
@@ -667,7 +636,6 @@ export default function DepositPage() {
               </div>
             )}
 
-            {/* Wire-specific section */}
             {method === "wire" && (
               <div className="mt-6 border-t border-[#F3F4F6] pt-5">
                 <p className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[#9CA3AF]">
@@ -728,7 +696,6 @@ export default function DepositPage() {
             </p>
           </div>
 
-          {/* Deposit tracker */}
           <div className="mt-8">
             <div className="flex items-center justify-between">
               <div>

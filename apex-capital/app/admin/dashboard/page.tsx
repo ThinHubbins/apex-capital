@@ -1200,23 +1200,57 @@ function SupportChatSection({ showToast }: { showToast: (msg: string) => void })
   useEffect(() => { if (selectedUserId) fetchMessages(selectedUserId); }, [selectedUserId]);
 
   useEffect(() => {
-    const channel = supabase.channel("admin-support-chat")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, (payload) => {
+  const channel = supabase.channel("admin-support-chat")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "support_messages" },
+      (payload) => {
         const msg = payload.new as SupportMessage;
-        if (msg.user_id === selectedUserId) {
-          setMessages((prev) => { if (prev.find((m) => m.id === msg.id)) return prev; return [...prev, msg]; });
-          fetch("/api/admin/support", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: msg.user_id }) });
-        } else {
-          setConversations((prev) => {
-            const existing = prev.find((c) => c.user_id === msg.user_id);
-            if (existing) return prev.map((c) => c.user_id === msg.user_id ? { ...c, last_message: msg.content, last_message_at: msg.created_at, unread_count: c.unread_count + 1 } : c);
-            fetchConversations({ silent: true }); return prev;
-          });
-          if (msg.sender === "user") showToast(`New message from ${msg.full_name ?? msg.email ?? "a user"}`);
-        }
-      }).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [selectedUserId]);
+
+        setSelectedUserId((currentSelectedId) => {
+          if (msg.user_id === currentSelectedId) {
+            // Append to open thread immediately
+            setMessages((prev) => {
+              if (prev.find((m) => m.id === msg.id)) return prev;
+              return [...prev, msg];
+            });
+            // Mark as read since admin is watching
+            fetch("/api/admin/support", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: msg.user_id }),
+            });
+          } else {
+            // Update conversation list for other threads
+            setConversations((prev) => {
+              const existing = prev.find((c) => c.user_id === msg.user_id);
+              if (existing) {
+                return prev.map((c) =>
+                  c.user_id === msg.user_id
+                    ? {
+                        ...c,
+                        last_message: msg.content,
+                        last_message_at: msg.created_at,
+                        unread_count: msg.sender === "user" ? c.unread_count + 1 : c.unread_count,
+                      }
+                    : c
+                );
+              }
+              fetchConversations({ silent: true });
+              return prev;
+            });
+            if (msg.sender === "user") {
+              showToast(`New message from ${msg.full_name ?? msg.email ?? "a user"}`);
+            }
+          }
+          return currentSelectedId; // don't actually change selectedUserId
+        });
+      }
+    )
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
+}, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
