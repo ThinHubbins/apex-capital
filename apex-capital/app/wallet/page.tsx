@@ -10,10 +10,6 @@ import {
 import Navbar from "../../components/Navbar";
 import { createClient } from "../../lib/supabase/client";
 
-// ─── Types ─────────────────────────────────────────────────────────
-// Mirrors app/wallet/deposit/page.tsx and app/wallet/withdraw/page.tsx —
-// same statuses, same fields, same /api routes.
-
 type KycStatus = "unverified" | "pending" | "verified" | "rejected";
 type RequestStatus = "pending" | "approved" | "rejected";
 
@@ -43,7 +39,6 @@ type Withdrawal = {
   reviewed_at: string | null;
 };
 
-// Unified shape for rendering deposits + withdrawals in one list
 type WalletItem = {
   id: string;
   kind: "deposit" | "withdrawal";
@@ -92,17 +87,23 @@ function StatCard({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-[#E5E5E2] bg-white p-5 shadow-sm sm:p-6">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">{label}</p>
-      <p className="mt-2 text-[26px] font-extrabold tracking-tight text-[#111827] sm:text-[28px]">
+    <div className="rounded-2xl border border-[#E5E5E2] bg-white p-4 shadow-sm sm:p-5 min-w-0 overflow-hidden">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF] truncate">
+        {label}
+      </p>
+      {/* Fluid font: shrinks through breakpoints so 9-digit values never overflow */}
+      <p
+        className="mt-2 font-extrabold tracking-tight text-[#111827] leading-none break-all
+                   text-[18px] xs:text-[20px] sm:text-[22px] md:text-[20px] lg:text-[22px] xl:text-[24px]"
+      >
         {value}
       </p>
       {sublabel && (
-        <p className={`mt-1 text-[12.5px] font-medium ${sublabelColor ?? "text-[#9CA3AF]"}`}>
+        <p className={`mt-1.5 text-[12px] font-medium leading-snug ${sublabelColor ?? "text-[#9CA3AF]"}`}>
           {sublabel}
         </p>
       )}
-      {children && <div className="mt-4">{children}</div>}
+      {children && <div className="mt-3">{children}</div>}
     </div>
   );
 }
@@ -159,7 +160,9 @@ function WalletItemRow({ item }: { item: WalletItem }) {
         </div>
       </div>
       <div className="shrink-0 text-right">
-        <p className={`text-[13.5px] font-semibold ${isDeposit ? "text-[#1a6b3c]" : "text-[#111827]"}`}>
+        {/* Amount in history rows: also clamp for large values */}
+        <p className={`font-semibold tabular-nums ${isDeposit ? "text-[#1a6b3c]" : "text-[#111827]"}
+                       text-[13px] sm:text-[13.5px]`}>
           {isDeposit ? "+" : "-"}${formatCurrency(item.amount)}
         </p>
         <div className="mt-1 flex justify-end">
@@ -211,7 +214,6 @@ export default function WalletPage() {
     load();
   }, []);
 
-  // ── Merge deposits + withdrawals into one feed, newest first ──
   const allItems: WalletItem[] = useMemo(() => {
     const depositItems: WalletItem[] = deposits.map((d) => ({
       id: d.id, kind: "deposit", amount: d.amount, status: d.status,
@@ -231,7 +233,6 @@ export default function WalletPage() {
     return allItems.filter((i) => i.kind === activeFilter);
   }, [allItems, activeFilter]);
 
-  // ── Stats ──
   const stats = useMemo(() => {
     const pendingDeposits = deposits.filter((d) => d.status === "pending");
     const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending");
@@ -285,11 +286,23 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* ── Balance overview ── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Available cash" value={`$${formatCurrency(profile?.cash_balance ?? 0)}`}>
-            
-          </StatCard>
+        {/* ── Balance overview ──
+              Mobile:  2-col grid (2×2)
+              Desktop: 4-col grid (1×4)
+              Each card has overflow-hidden + break-all so 9-digit values wrap
+              rather than stretching the grid column.
+        ── */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+
+          {/* Available cash — spans full width on mobile so the CTA buttons fit */}
+          <div className="col-span-2 lg:col-span-1">
+            <StatCard
+              label="Available cash"
+              value={`$${formatCurrency(profile?.cash_balance ?? 0)}`}
+              sublabel="Ready to invest"
+            >
+            </StatCard>
+          </div>
 
           <StatCard
             label="Pending"
