@@ -36,7 +36,7 @@ const QUICK_AMOUNTS = [100, 500, 1000, 5000];
 const POLL_INTERVAL_MS = 30000;
 
 const CRYPTO_OPTIONS: CryptoOption[] = [
-  { asset: "BTC", network: "BTC NETWORK", address: "bc1qzd67jzq0n7sm82jt0nyxh4egwyg0dtzvvdkuee" },
+  { asset: "BTC", network: "BTC NETWORK", address: "bc1q7402kavptf6gj0ewljtka43ldkysqcva26w83m" },
   { asset: "USDT", network: "ERC20", address: "0x31D91d829A98e886809f382BD5E77446a17a458E" },
   { asset: "ETH", network: "ETH", address: "0x31d91d829a98e886809f382bd5e77446a17a458e" },
   { asset: "SOL", network: "SOLANA", address: "3N4dgunmJhwFd58DUS2ea2J9Aj4Z14EBSBUWUya2KcPz" },
